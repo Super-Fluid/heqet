@@ -1,12 +1,19 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Kyuubey.Types where
+module Heget.Types where
 
 import Control.Lens
 
-data LyMusic = SingleNote LyNote| Par LyMusic LyMusic | Seq LyMusic LyMusic |
-                     Error String LyMusic | CommandMusicExpression String LyMusic |
-                     CommandStartStop String String LyMusic | CommandPrevNote String LyNote | CommandNextNote String LyNote
+data Music a = 
+    SingleNote Duration a | 
+    Par (Music a) (Music a) | 
+    Seq (Music a) (Music a) |
+    Error String (Music a) | 
+    CommandMusicExpression String (Music a) |
+    CommandStartStop String String (Music a) | 
+    CommandPrevNote String a | 
+    CommandNextNote String a
+    
     deriving (Show, Eq)
 
 data PitchClass = C | Cs | D | Ds | E | F | Fs | G | Gs | A | As | B
@@ -21,25 +28,28 @@ type Cents = Int
 data Pitch = Pitch PitchClass Octave Cents
     deriving (Show, Eq, Ord)
 
-data LyNote = LyNote { _pc :: PitchClass -- use Pitch type ???????
-                     , _acc :: Accedental
-                     , _cents :: Cents
-                     , _oct :: Octave 
-                     , _dur :: Duration
-                     , _arts :: [Articulation]
-                     }
+data Note = Note { 
+      _pc :: PitchClass -- use Pitch type ???????
+    , _acc :: Accedental
+    , _cents :: Cents
+    , _oct :: Octave 
+    , _dur :: Duration
+    , _arts :: [Articulation]
+    }
     deriving (Show, Eq)
-makeLenses ''LyNote
+makeLenses ''Note
 
-data Instrument = Instrument { _midiInstrument :: String
---                             , available_notes :: Either range set
---                             , pick_up_time :: ?
---                             , put_down_time :: ?
-                             , _clefAssigner :: LyMusic -> LyMusic
-                             , _transposition :: Pitch
-                             , _name :: String
-                             , _shortName :: String
-                             }
+data Instrument = Instrument { 
+      _midiInstrument :: String
+--  , available_notes :: Either range set
+--  , pick_up_time :: ?
+--  , put_down_time :: ?
+    , _annotatePlayability :: (Music Note) -> (Music Note)
+    , _assignClefs :: (Music Note) -> (Music Note)
+    , _transposition :: Pitch
+    , _name :: String
+    , _shortName :: String
+    }
 makeLenses ''Instrument
 
 instance Show Instrument where
@@ -50,7 +60,7 @@ type Instruments = [Instrument]
 data StaffName = Auto | Manual String
     deriving (Show, Eq)
 
-data Voice = Voice LyMusic
+data Voice = Voice (Music Note)
     deriving (Show, Eq)
 data StaffType = DrumStaff | TabStaff | CommonStaff
     deriving (Show, Eq)
@@ -80,5 +90,4 @@ data BookPart = Markup String | Score Header StaffOrStaffGroup
     deriving (Show)
 
 type Book = [BookPart]
-
 
