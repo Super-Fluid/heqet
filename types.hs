@@ -73,11 +73,14 @@ data Instrument = Instrument {
     , _transposition :: Pitch
     , _name :: String
     , _shortName :: String
+    , _kind :: String
     }
 makeLenses ''Instrument
 
 instance Show Instrument where
     show i = "Instrument: " ++ i^.name
+instance Eq Instrument where
+    i == j = i^.kind == j^.kind
 
 type Instruments = [Instrument]
 
