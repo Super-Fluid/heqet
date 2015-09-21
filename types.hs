@@ -133,5 +133,63 @@ str2pc = [
 pitchClass :: GenParser Char st PitchClass
 pitchClass = do
     str <- many lower
-    return $ fromMaybe (error "oh no bad lilypond code..") (lookup str str2pc)
+    case (lookup str str2pc) of
+        Nothing -> fail "oh no, bad lilypond"
+        Just pc -> return pc
 -- todo: throw a real parse error here! 
+
+octUp :: GenParser Char st Char
+octUp = char '\''
+
+octDown :: GenParser Char st Char
+octDown = char ','
+
+octave = do
+    os <- many1 octUp <|> many octDown
+    return $ case (length os) of
+        0 -> 0
+        n -> n * (case (head os) of '\'' -> 1; ',' -> -1)
+
+durBase :: GenParser Char st String
+durBase = 
+        string "1"
+    <|> string "2"
+    <|> string "4"
+    <|> string "8"
+    <|> string "16"
+    <|> string "32"
+    <|> string "64"
+    <|> string "128"
+    <|> string "256" 
+    <|> string "\breve"
+
+durDots :: GenParser Char st [Char]
+durDots = many $ char '.'
+
+addDots :: Duration -> Int -> Duration
+addDots dur numDots = dur * (2 - ((1/2) ^ numDots))
+
+str2dur :: [(String,Duration)]
+str2dur = [
+    ("1",4)
+   ,("2",2)
+   ,("4",1)
+   ,("8",1/2)
+   ,("16",1/4)
+   ,("32",1/8)
+   ,("64",1/16)
+   ,("128",1/32)
+   ,("256",1/64)
+   ,("\breve",8)
+   ]
+
+duration :: GenParser Char st Duration
+duration = do
+    baseStr <- durBase
+    base <- case (lookup baseStr str2dur) of
+        Nothing -> fail "oh no, bad lilypond"
+        Just b -> return b
+    dots <- durDots
+    return $ addDots base (length dots)
+
+-- bes'4.-.\pp\fermata
