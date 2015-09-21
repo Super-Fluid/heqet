@@ -25,7 +25,6 @@ data Accedental = DoubleFlat | Flat | Natural | Sharp | DoubleSharp
 type Octave = Int
 type Duration = Rational
 type PointInTime = Rational
-type Articulation = String
 type Dynamic = Double -- ??
 type NoteCommand = String
 data ExprCommand = ExprCommand {
@@ -59,7 +58,6 @@ makeLenses ''Pitch
 data Note = Note { 
       _pitch :: Pitch
     , _acc :: Accedental
-    , _arts :: [Articulation] -- articulations must proceed note commands in ly code; that's the only difference here
     , _dynamic :: Dynamic
     , _noteCommands :: [NoteCommand]
     , _exprCommands :: [ExprCommand] -- Note: head to tail == outer to inner commands
