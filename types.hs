@@ -3,6 +3,8 @@
 module Heget.Types where
 
 import Control.Lens
+import Text.ParserCombinators.Parsec
+import Data.Maybe (fromMaybe)
 
 data Music a = 
     SingleNote Duration a | 
@@ -120,4 +122,16 @@ type Piece = [(Music' Note)]
 
 ---- ==================-----
 
+str2pc :: [(String,PitchClass)]
+str2pc = [
+    ("a",A)
+   ,("b",B)
+   ,("c",C)
+   ,("bf",As)
+    ]
 
+pitchClass :: GenParser Char st PitchClass
+pitchClass = do
+    str <- many lower
+    return $ fromMaybe (error "oh no bad lilypond code..") (lookup str str2pc)
+-- todo: throw a real parse error here! 
