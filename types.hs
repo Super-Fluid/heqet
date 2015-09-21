@@ -22,19 +22,45 @@ data Accedental = DoubleFlat | Flat | Natural | Sharp | DoubleSharp
     deriving (Show, Eq, Ord, Enum, Bounded)
 type Octave = Int
 type Duration = Rational
+type PointInTime = Rational
 type Articulation = String
+type Dynamic = Double -- ??
+type NoteCommand = String
+data ExprCommand = ExprCommand {
+    _begin :: String
+  , _end :: String
+  }
+  deriving (Eq)
+makeLenses ''ExprCommand
+instance Show ExprCommand where
+    show cmd = "Command: \"" ++ cmd^.begin ++ " ... " ++ cmd^.end ++ "\""
+
+data InTime a = InTime {
+    _val :: a
+  , _dur :: Duration
+  , _t :: PointInTime
+    }
+    deriving (Show, Eq)
+makeLenses ''InTime
+    
+type Music' a = [(InTime a)] -- Invariant: must be sorted chronologically
 
 type Cents = Int
-data Pitch = Pitch PitchClass Octave Cents
+data Pitch = Pitch {
+    _pc :: PitchClass 
+  , _oct :: Octave 
+  , _cents :: Cents
+}
     deriving (Show, Eq, Ord)
+makeLenses ''Pitch
 
 data Note = Note { 
-      _pc :: PitchClass -- use Pitch type ???????
+      _pitch :: Pitch
     , _acc :: Accedental
-    , _cents :: Cents
-    , _oct :: Octave 
-    , _dur :: Duration
-    , _arts :: [Articulation]
+    , _arts :: [Articulation] -- articulations must proceed note commands in ly code; that's the only difference here
+    , _dynamic :: Dynamic
+    , _noteCommands :: [NoteCommand]
+    , _exprCommands :: [ExprCommand] -- Note: head to tail == outer to inner commands
     }
     deriving (Show, Eq)
 makeLenses ''Note
@@ -59,7 +85,6 @@ type Instruments = [Instrument]
 
 data StaffName = Auto | Manual String
     deriving (Show, Eq)
-
 data Voice = Voice (Music Note)
     deriving (Show, Eq)
 data StaffType = DrumStaff | TabStaff | CommonStaff
@@ -71,10 +96,8 @@ data Staff = Staff { _staffType :: StaffType
                    }
     deriving (Show)
 makeLenses ''Staff
-
 data StaffOrStaffGroup = SingleStaff Staff | GroupOfStaves StaffGroup
     deriving (Show)
-
 data StaffGroupType = ChoirStaff | GrandStaff | PlainGroup | PianoStaff
     deriving (Show, Eq)
 data StaffGroup = StaffGroup { _staffGroupType :: StaffGroupType
@@ -83,11 +106,18 @@ data StaffGroup = StaffGroup { _staffGroupType :: StaffGroupType
                              }
     deriving (Show)
 makeLenses ''StaffGroup
-
 type Header = String
-
 data BookPart = Markup String | Score Header StaffOrStaffGroup
     deriving (Show)
-
 type Book = [BookPart]
+
+----
+
+data Transpositionality = Concert | TruePitch | Transposed
+-- Concert scores still transpose some instruments by octaves (bass, piccolo, celeste, guitar)
+
+type Piece = [(Music' Note)]
+
+---- ==================-----
+
 
