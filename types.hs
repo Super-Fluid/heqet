@@ -146,18 +146,36 @@ octave = do
         0 -> 0
         n -> n * (case (head os) of '\'' -> 1; ',' -> -1)
 
+denom = do 
+    spaces
+    char '%'
+    spaces
+    many1 digit
+
+noDenom :: GenParser Char st String
+noDenom = do
+    return "1"
+
+maybeDenom :: GenParser Char st String
+maybeDenom = try denom <|> noDenom
+
+-- but this should NOT accept "%" as it does. \d{6%} is malformed
+
+rationalDur :: GenParser Char st String
+rationalDur = do
+    string "\\d{"
+    spaces
+    num <- many1 digit
+    denom <- maybeDenom
+    spaces
+    char '}'
+    return $ num ++ "%" ++ denom
+
 durBase :: GenParser Char st String
 durBase = 
-        string "1"
-    <|> string "2"
-    <|> string "4"
-    <|> string "8"
-    <|> string "16"
-    <|> string "32"
-    <|> string "64"
-    <|> string "128"
-    <|> string "256" 
-    <|> string "\breve"
+        many1 digit
+    <|> (try $ string "\\breve")
+    <|> rationalDur
 
 durDots :: GenParser Char st [Char]
 durDots = many $ char '.'
@@ -176,16 +194,28 @@ str2dur = [
    ,("64",1/16)
    ,("128",1/32)
    ,("256",1/64)
-   ,("\breve",8)
+   ,("\\breve",8)
    ]
 
 duration :: GenParser Char st Duration
 duration = do
     baseStr <- durBase
     base <- case (lookup baseStr str2dur) of
-        Nothing -> fail "oh no, bad lilypond"
+        Nothing -> return (read baseStr)
         Just b -> return b
     dots <- durDots
     return $ addDots base (length dots)
 
+-- still need better error message
 
+inputPitch :: GenParser Char st Pitch
+inputPitch = do
+    pc <- pitchClass
+    o <- octave
+    return $ Pitch { _pc = pc, _oct = o, _cents = 0 }
+
+inputNote :: GenParser Char st (Note,Duration)
+inputNote = do
+    p <- inputPitch
+    d <- duration
+    return (Note { _pitch = p, _acc = Natural, _noteCommands = [], _exprCommands = [] }, d)
