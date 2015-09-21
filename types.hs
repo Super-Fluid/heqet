@@ -25,7 +25,6 @@ data Accedental = DoubleFlat | Flat | Natural | Sharp | DoubleSharp
 type Octave = Int
 type Duration = Rational
 type PointInTime = Rational
-type Dynamic = Double -- ??
 type NoteCommand = String
 data ExprCommand = ExprCommand {
     _begin :: String
@@ -58,7 +57,6 @@ makeLenses ''Pitch
 data Note = Note { 
       _pitch :: Pitch
     , _acc :: Accedental
-    , _dynamic :: Dynamic
     , _noteCommands :: [NoteCommand]
     , _exprCommands :: [ExprCommand] -- Note: head to tail == outer to inner commands
     }
@@ -190,4 +188,4 @@ duration = do
     dots <- durDots
     return $ addDots base (length dots)
 
--- bes'4.-.\pp\fermata
+
