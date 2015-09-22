@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell, QuasiQuotes #-}
+
 module Parse where
 
 import Types
@@ -5,6 +7,8 @@ import Control.Lens
 import Text.ParserCombinators.Parsec
 import Data.Maybe (fromMaybe)
 import qualified Data.Either
+import Language.Haskell.TH.Quote
+import Language.Haskell.TH 
 
 str2pc :: [(String,PitchClass)]
 str2pc = [
@@ -99,12 +103,14 @@ duration = do
 
 inputPitch :: GenParser Char st Pitch'
 inputPitch = do
+    spaces
     pc <- pitchClass
     o <- octave
     return $ RegPitch $ Pitch { _pc = pc, _oct = o, _cents = 0 }
 
 rest :: GenParser Char st Pitch'
 rest = do
+    spaces
     char 'r'
     return Rest
 
@@ -113,6 +119,7 @@ inputPitchEtc = (try inputPitch) <|> rest
 
 inputNote :: GenParser Char st (Note,Duration)
 inputNote = do
+    spaces
     p <- inputPitchEtc
     d <- duration
     spaces
@@ -122,7 +129,10 @@ notes2music :: [(Note,Duration)] -> Music' Note
 notes2music xs = foldl addToMusic ([],0) xs & (^._1)
     where addToMusic (m, time) (note, d) = (m ++ [InTime {_val = note, _dur = d, _t = time}], time+d)
 
-music :: GenParser Char st (Music' Note)
-music = do
+parseMusic :: GenParser Char st (Music' Note)
+parseMusic = do
     notes <- many inputNote 
     return $ notes2music notes
+
+music :: QuasiQuoter
+music = QuasiQuoter { quoteExp = \s -> [| runParser parseMusic () "" s |] }
