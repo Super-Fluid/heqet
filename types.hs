@@ -20,7 +20,14 @@ data Music a =
 data PitchClass = C | Cs | D | Ds | E | F | Fs | G | Gs | A | As | B
     deriving (Show, Eq, Ord, Enum, Bounded)
 data Accedental = DoubleFlat | Flat | Natural | Sharp | DoubleSharp
-    deriving (Show, Eq, Ord, Enum, Bounded)
+    deriving (Eq, Ord, Enum, Bounded)
+instance Show Accedental where
+    show DoubleFlat = "bb"
+    show Flat = "b"
+    show Natural = ""
+    show Sharp = "#"
+    show DoubleSharp = "x"
+
 type Octave = Int
 type Duration = Rational
 type PointInTime = Rational
@@ -39,9 +46,12 @@ data InTime a = InTime {
   , _dur :: Duration
   , _t :: PointInTime
     }
-    deriving (Show, Eq)
+    deriving (Eq)
 makeLenses ''InTime
-    
+
+instance (Show a) => Show (InTime a) where
+    show intime = (show $ intime^.val) ++ "[" ++ (show $ intime^.dur) ++ ", " ++ (show $ intime^.t) ++ "]"
+
 type Music' a = [(InTime a)] -- Invariant: must be sorted chronologically
 
 type Cents = Int
@@ -50,13 +60,21 @@ data Pitch = Pitch {
   , _oct :: Octave 
   , _cents :: Cents
 }
-    deriving (Show, Eq, Ord)
+    deriving (Eq, Ord)
 makeLenses ''Pitch
+
+instance Show Pitch where
+    show p = (show $ p^.pc) ++ (show $ p^.oct) ++ "~" ++ (show $ p^.cents)
 
 type Lyric = String
 
-data Pitch' = RegPitch Pitch | Rest | Lyric
-    deriving (Show, Eq)
+data Pitch' = RegPitch Pitch | Rest | Lyric Lyric
+    deriving (Eq)
+
+instance Show Pitch' where
+    show Rest = "Rest"
+    show (Lyric l) = l
+    show (RegPitch p) = show p
 
 data Note = Note { 
       _pitch :: Pitch'
@@ -64,8 +82,11 @@ data Note = Note {
     , _noteCommands :: [NoteCommand]
     , _exprCommands :: [ExprCommand] -- Note: head to tail == outer to inner commands
     }
-    deriving (Show, Eq)
+    deriving (Eq)
 makeLenses ''Note
+
+instance Show Note where
+    show n = (show $ n^.pitch) ++ (show $ n^.acc) ++ " " ++  (show $ n^.noteCommands) ++ (show $ n^.exprCommands)
 
 data Instrument = Instrument { 
       _midiInstrument :: String
