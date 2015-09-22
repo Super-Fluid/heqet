@@ -19,9 +19,9 @@ data Music a =
 
 data PitchClass = C | Cs | D | Ds | E | F | Fs | G | Gs | A | As | B
     deriving (Show, Eq, Ord, Enum, Bounded)
-data Accedental = DoubleFlat | Flat | Natural | Sharp | DoubleSharp
+data Accidental = DoubleFlat | Flat | Natural | Sharp | DoubleSharp
     deriving (Eq, Ord, Enum, Bounded)
-instance Show Accedental where
+instance Show Accidental where
     show DoubleFlat = "bb"
     show Flat = "b"
     show Natural = ""
@@ -67,18 +67,19 @@ instance Show Pitch where
     show p = (show $ p^.pc) ++ (show $ p^.oct) ++ "~" ++ (show $ p^.cents)
 
 type Lyric = String
+type Perc = Pitch
 
-data Pitch' = RegPitch Pitch | Rest | Lyric Lyric
+data Pitch' = RegPitch Pitch | Rest | Perc Perc
     deriving (Eq)
 
 instance Show Pitch' where
     show Rest = "Rest"
-    show (Lyric l) = l
+    show (Perc p) = show p
     show (RegPitch p) = show p
 
 data Note = Note { 
       _pitch :: Pitch'
-    , _acc :: Accedental
+    , _acc :: Accidental
     , _noteCommands :: [NoteCommand]
     , _exprCommands :: [ExprCommand] -- Note: head to tail == outer to inner commands
     }
