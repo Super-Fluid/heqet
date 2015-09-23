@@ -9,6 +9,7 @@ import Data.Maybe (fromMaybe)
 import qualified Data.Either
 import Language.Haskell.TH.Quote
 import Language.Haskell.TH 
+import qualified Tables
 
 str2pc :: [(String,PitchClass)]
 str2pc = [
@@ -18,10 +19,10 @@ str2pc = [
    ,("bf",As)
     ]
 
-pitchClass :: GenParser Char st PitchClass
+pitchClass :: GenParser Char st (PitchClass,Accidental)
 pitchClass = do
     str <- many lower
-    case (lookup str str2pc) of
+    case (lookup str Tables.en) of
         Nothing -> fail "oh no, bad lilypond"
         Just pc -> return pc
 -- todo: throw a real parse error here! 
@@ -101,29 +102,29 @@ duration = do
 
 -- still need better error message
 
-inputPitch :: GenParser Char st Pitch'
+inputPitch :: GenParser Char st (Pitch',Accidental)
 inputPitch = do
     spaces
-    pc <- pitchClass
+    (pc,acc) <- pitchClass
     o <- octave
-    return $ RegPitch $ Pitch { _pc = pc, _oct = o, _cents = 0 }
+    return $ (RegPitch $ Pitch { _pc = pc, _oct = o, _cents = 0 },acc)
 
-rest :: GenParser Char st Pitch'
+rest :: GenParser Char st (Pitch',Accidental)
 rest = do
     spaces
     char 'r'
-    return Rest
+    return (Rest,Natural) -- ugh
 
-inputPitchEtc :: GenParser Char st Pitch'
+inputPitchEtc :: GenParser Char st (Pitch',Accidental)
 inputPitchEtc = (try inputPitch) <|> rest
 
 inputNote :: GenParser Char st (Note,Duration)
 inputNote = do
     spaces
-    p <- inputPitchEtc
+    (p,acc) <- inputPitchEtc
     d <- duration
     spaces
-    return (Note { _pitch = p, _acc = Natural, _noteCommands = [], _exprCommands = [] }, d)
+    return (Note { _pitch = p, _acc = acc, _noteCommands = [], _exprCommands = [] }, d)
 
 notes2music :: [(Note,Duration)] -> Music' Note
 notes2music xs = foldl addToMusic ([],0) xs & (^._1)
