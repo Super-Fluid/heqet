@@ -91,14 +91,22 @@ str2dur = [
    ,("0",0)
    ]
 
-duration :: GenParser Char st Duration
+noDuration :: GenParser Char st (Maybe Duration)
+noDuration = do
+    -- don't parse anything
+    return Nothing
+
+duration :: GenParser Char st (Maybe Duration)
 duration = do
     baseStr <- durBase
     base <- case (lookup baseStr str2dur) of
         Nothing -> return (read baseStr)
         Just b -> return b
     dots <- durDots
-    return $ addDots base (length dots)
+    return $ Just $ addDots base (length dots)
+
+maybeDuration :: GenParser Char st (Maybe Duration)
+maybeDuration = (try duration) <|> noDuration
 
 -- still need better error message
 
@@ -118,17 +126,19 @@ rest = do
 inputPitchEtc :: GenParser Char st (Pitch',Accidental)
 inputPitchEtc = (try inputPitch) <|> rest
 
-inputNote :: GenParser Char st (Note,Duration)
+inputNote :: GenParser Char st (Note,Maybe Duration)
 inputNote = do
     spaces
     (p,acc) <- inputPitchEtc
-    d <- duration
+    d <- maybeDuration
     spaces
     return (Note { _pitch = p, _acc = acc, _noteCommands = [], _exprCommands = [] }, d)
 
-notes2music :: [(Note,Duration)] -> Music' Note
-notes2music xs = foldl addToMusic ([],0) xs & (^._1)
-    where addToMusic (m, time) (note, d) = (m ++ [InTime {_val = note, _dur = d, _t = time}], time+d)
+notes2music :: [(Note,Maybe Duration)] -> Music' Note
+notes2music xs = foldl addToMusic ([],0,1) xs & (^._1)
+
+addToMusic (m, time, _) (note, Just d) = (m ++ [InTime {_val = note, _dur = d, _t = time}], time+d, d)
+addToMusic (m, time, prevDur) (note, Nothing) = (m ++ [InTime {_val = note, _dur = prevDur, _t = time}], time+prevDur, prevDur)
 
 parseMusic :: GenParser Char st (Music' Note)
 parseMusic = do
