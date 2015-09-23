@@ -146,4 +146,8 @@ parseMusic = do
     return $ notes2music notes
 
 music :: QuasiQuoter
-music = QuasiQuoter { quoteExp = \s -> [| runParser parseMusic () "" s |] }
+music = QuasiQuoter { quoteExp = \s -> [| itBetterWork $ runParser parseMusic () "" s |] }
+
+itBetterWork :: Either a b -> b
+itBetterWork (Left _) = error "it didn't work :("
+itBetterWork (Right b) = b
