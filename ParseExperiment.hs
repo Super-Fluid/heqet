@@ -70,7 +70,7 @@ function :: Parser Tree1
 function = do
     string "\\function"
     whiteSpace
-    func <- braces $ stringLiteral
+    func <- stringLiteral
     whiteSpace
     music <- many tree
     whiteSpace
@@ -82,9 +82,9 @@ command :: Parser Tree1
 command = do
     string "\\command"
     whiteSpace
-    begin <- braces $ stringLiteral
+    begin <- stringLiteral
     whiteSpace
-    end <- braces $ stringLiteral
+    end <- stringLiteral
     whiteSpace
     music <- many tree
     whiteSpace
