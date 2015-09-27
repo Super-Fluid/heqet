@@ -1,3 +1,4 @@
+{-# LANGUAGE TemplateHaskell, QuasiQuotes #-}
 module ParseExperiment where
 
 import Text.ParserCombinators.Parsec
@@ -6,6 +7,10 @@ import System.IO
 import Control.Monad
 import Text.ParserCombinators.Parsec.Expr
 import qualified Text.ParserCombinators.Parsec.Token as Token
+-- demo
+import Language.Haskell.TH.Quote
+import Language.Haskell.TH 
+import Control.Applicative ((<*))
 
 type PitchStr = String
 type DurStr = String
@@ -176,7 +181,7 @@ noDur :: Parser Dur1
 noDur = return NoDur
 
 noteItem :: Parser NoteItem
-noteItem = tie <|> try articulation <|> try with <|> try cents <|> noteCommand
+noteItem = (tie <|> try articulation <|> try with <|> try cents <|> noteCommand) <* whiteSpace
 
 tie :: Parser NoteItem
 tie = char '~' >> return Tie
@@ -250,3 +255,11 @@ grace = do
     n <- braces $ many tree
     whiteSpace
     return $ Grace g n
+
+
+demo :: QuasiQuoter
+demo = QuasiQuoter { quoteExp = \s -> [|  runParser musicParser () "" s |], quotePat = undefined, quoteType = undefined, quoteDec = undefined }
+
+itBetterWork :: Either a b -> b
+itBetterWork (Left _) = error "it didn't work :("
+itBetterWork (Right b) = b
