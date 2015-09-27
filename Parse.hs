@@ -3,7 +3,7 @@
 module Parse where
 
 import Types
-import Control.Lens
+import Control.Lens hiding (noneOf)
 import Text.ParserCombinators.Parsec
 import Data.Maybe (fromMaybe)
 import qualified Data.Either
@@ -146,8 +146,42 @@ parseMusic = do
     return $ notes2music notes
 
 music :: QuasiQuoter
-music = QuasiQuoter { quoteExp = \s -> [| itBetterWork $ runParser parseMusic () "" s |] }
+music = QuasiQuoter { quoteExp = \s -> [| itBetterWork $ runParser parseMusic () "" s |], quotePat = undefined, quoteType = undefined, quoteDec = undefined }
 
 itBetterWork :: Either a b -> b
 itBetterWork (Left _) = error "it didn't work :("
 itBetterWork (Right b) = b
+
+shortArt :: GenParser Char st String
+shortArt = do
+    b <- char '-'
+    c <- anyChar
+    return [b,c]
+
+quotedString :: GenParser Char st String
+quotedString = do
+    char '\"'
+    x <- many $ noneOf "\"" -- Bad
+    char '\"'
+    return x
+
+noteCommand :: GenParser Char st String
+noteCommand = do
+    string "\\with{"
+    cmd <- quotedString
+    string "}"
+    return cmd
+
+exprCommand :: GenParser Char st ExprCommand
+exprCommand = do
+    string "\\cmd{"
+    begin <- quotedString
+    char ','
+    end <- quotedString
+    char '}'
+    return $ ExprCommand { _begin = begin, _end = end }
+
+endCommand :: GenParser Char st ()
+endCommand = do
+    string "\\end"
+    return ()
