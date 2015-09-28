@@ -26,6 +26,10 @@ data Pitch1 = NoteName String String
     | Chord1 [Pitch1]
     deriving (Show)
 
+data Pitch3 = NoteName3 String String
+    | Frequency3 Double
+    deriving (Show)
+
 data NoteItem = Tie 
     | Articulation Char
     | NoteCommand String
@@ -33,12 +37,17 @@ data NoteItem = Tie
     | Cents Double
     deriving (Show)
 
-data Tree1 = Function String [Tree1]
-    | Command String String [Tree1]
-    | Leaf Pitch1 Dur1 [NoteItem]
-    | Voices [Tree1]
-    | Grace [Tree1] [Tree1]
+data TreeX p d = Function String [TreeX p d]
+    | Command String String [TreeX p d]
+    | Leaf p d [NoteItem]
+    | Voices [[TreeX p d]]
+    | Grace [TreeX p d] [TreeX p d]
     deriving (Show)
+
+type Tree1 = TreeX Pitch1 Dur1
+type Tree2 = TreeX Pitch1 Duration
+type Tree3 = TreeX Pitch3 Duration
+
 
 -- based on https://wiki.haskell.org/Parsing_a_simple_imperative_language
 
@@ -239,7 +248,7 @@ voices1 :: Parser Tree1
 voices1 = do 
     string "<<"
     whiteSpace
-    vs <- (braces tree) `sepBy` voicesSep
+    vs <- (braces (many $ try tree)) `sepBy` voicesSep
     whiteSpace
     string ">>"
     return $ Voices vs
@@ -290,9 +299,15 @@ lookupDur base = case (lookup base commonDurs) of
     Just d -> d
     Nothing -> error $ "unknown duration \""++base++"\". If you want an arbitrary rational duration, you need to prefix it with \"\\d\"."
 
---makeAllDurationsRational :: Tree1 -> Tree1
---makeAllDurationsRational = 
+makeAllDurationsRational :: Tree1 -> Tree2
+makeAllDurationsRational (Function s mus) = Function s (map makeAllDurationsRational mus)
+makeAllDurationsRational (Command s t mus) = Command s t (map makeAllDurationsRational mus)
+makeAllDurationsRational (Leaf p d noteitems) = Leaf p (makeDurationRational d) noteitems
+makeAllDurationsRational (Voices muss) = Voices (map (map makeAllDurationsRational) muss)
+makeAllDurationsRational (Grace mus1 mus2) = Grace (map makeAllDurationsRational mus1) (map makeAllDurationsRational mus2)
 
-makeDurationRational :: Dur1 -> Dur1
-makeDurationRational (RationalDur r) = RationalDur r
-makeDurationRational (CommonDur base dots) = RationalDur $ addDots (lookupDur base) dots
+makeDurationRational :: Dur1 -> Duration
+makeDurationRational (RationalDur r) = r
+makeDurationRational (CommonDur base dots) = addDots (lookupDur base) dots
+
+-- splitChords :: Tree2 -> Tree3
