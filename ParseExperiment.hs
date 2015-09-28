@@ -11,18 +11,19 @@ import qualified Text.ParserCombinators.Parsec.Token as Token
 import Language.Haskell.TH.Quote
 import Language.Haskell.TH 
 import Control.Applicative ((<*))
+import Types
 
 type PitchStr = String
 type DurStr = String
 
 data Dur1 = NoDur 
-    | RationalDur Rational 
+    | RationalDur Duration
     | CommonDur String Int -- will need to be looked up later
     deriving (Show)
 
 data Pitch1 = NoteName String String
-    | Frequency Double
-    | Chord [Pitch1]
+    | Frequency1 Double
+    | Chord1 [Pitch1]
     deriving (Show)
 
 data NoteItem = Tie 
@@ -69,7 +70,7 @@ tree = do
     return r
 
 root :: Parser Tree1
-root = try function <|> try command <|> try leaf <|> voices <|> grace
+root = try function <|> try command <|> try leaf <|> voices1 <|> grace
 
 function :: Parser Tree1
 function = do
@@ -103,15 +104,15 @@ command = do
 
 leaf :: Parser Tree1
 leaf = do
-    p <- pitch
+    p <- pitch1
     dur <- duration
     whiteSpace
     items <- noteItem `sepBy` whiteSpace
     whiteSpace
     return $ Leaf p dur items
 
-pitch :: Parser Pitch1
-pitch = noteName <|> frequency <|> chord
+pitch1 :: Parser Pitch1
+pitch1 = noteName <|> frequency <|> chord
 
 noteName :: Parser Pitch1
 noteName = do
@@ -123,7 +124,7 @@ frequency :: Parser Pitch1
 frequency = do
     hz <- num
     string "hz"
-    return $ Frequency hz
+    return $ Frequency1 hz
 
 num :: Parser Double
 num = try float <|> naturalFloat
@@ -137,10 +138,10 @@ chord :: Parser Pitch1
 chord = do
     char '<'
     whiteSpace
-    ps <- pitch `sepBy` whiteSpace
+    ps <- pitch1 `sepBy` whiteSpace
     whiteSpace
     char '>'
-    return $ Chord ps
+    return $ Chord1 ps
 
 duration :: Parser Dur1
 duration = rationalDur <|> commonDur <|> noDur
@@ -185,7 +186,7 @@ noDur :: Parser Dur1
 noDur = return NoDur
 
 noteItem :: Parser NoteItem
-noteItem = (tie <|> try articulation <|> try with <|> try cents <|> try noteCommand) <* whiteSpace
+noteItem = (tie <|> try articulation <|> try with <|> try cents1 <|> try noteCommand) <* whiteSpace
 
 tie :: Parser NoteItem
 tie = char '~' >> return Tie
@@ -205,8 +206,8 @@ with = do
     whiteSpace
     return $ With cmd
 
-cents :: Parser NoteItem
-cents = do
+cents1 :: Parser NoteItem
+cents1 = do
     string "\\cents"
     whiteSpace
     x <- pmnum
@@ -234,8 +235,8 @@ noteCommand =  do
     name <- many1 alphaNum
     return $ NoteCommand name
 
-voices :: Parser Tree1
-voices = do 
+voices1 :: Parser Tree1
+voices1 = do 
     string "<<"
     whiteSpace
     vs <- (braces tree) `sepBy` voicesSep
@@ -264,6 +265,34 @@ grace = do
 demo :: QuasiQuoter
 demo = QuasiQuoter { quoteExp = \s -> [|  runParser musicParser () "" s |], quotePat = undefined, quoteType = undefined, quoteDec = undefined }
 
-itBetterWork :: Either a b -> b
-itBetterWork (Left _) = error "it didn't work :("
-itBetterWork (Right b) = b
+--- TRANSFORMATIONS
+
+addDots :: Duration -> Int -> Duration
+addDots dur numDots = dur * (2 - ((1/2) ^ numDots))
+
+commonDurs :: [(String,Duration)]
+commonDurs = [
+    ("1",4)
+   ,("2",2)
+   ,("4",1)
+   ,("8",1/2)
+   ,("16",1/4)
+   ,("32",1/8)
+   ,("64",1/16)
+   ,("128",1/32)
+   ,("256",1/64)
+   ,("\\breve",8)
+   ,("0",0)
+   ]
+
+lookupDur :: String -> Duration
+lookupDur base = case (lookup base commonDurs) of
+    Just d -> d
+    Nothing -> error $ "unknown duration \""++base++"\". If you want an arbitrary rational duration, you need to prefix it with \"\\d\"."
+
+--makeAllDurationsRational :: Tree1 -> Tree1
+--makeAllDurationsRational = 
+
+makeDurationRational :: Dur1 -> Dur1
+makeDurationRational (RationalDur r) = RationalDur r
+makeDurationRational (CommonDur base dots) = RationalDur $ addDots (lookupDur base) dots
