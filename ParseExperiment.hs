@@ -59,7 +59,7 @@ natural = Token.natural lexer
 integer = Token.integer lexer
 
 musicParser :: Parser [Tree1]
-musicParser = many tree
+musicParser = many tree <* eof
 
 tree :: Parser Tree1
 tree = do
@@ -77,9 +77,11 @@ function = do
     whiteSpace
     func <- stringLiteral
     whiteSpace
-    music <- many tree
+    char '{'
     whiteSpace
-    string "\\end"
+    music <- many (try tree)
+    whiteSpace
+    char '}'
     whiteSpace
     return $ Function func music
 
@@ -91,9 +93,11 @@ command = do
     whiteSpace
     end <- stringLiteral
     whiteSpace
+    char '{'
+    whiteSpace
     music <- many tree
     whiteSpace
-    string "\\end"
+    char '}'
     whiteSpace
     return $ Command begin end music
 
@@ -181,7 +185,7 @@ noDur :: Parser Dur1
 noDur = return NoDur
 
 noteItem :: Parser NoteItem
-noteItem = (tie <|> try articulation <|> try with <|> try cents <|> noteCommand) <* whiteSpace
+noteItem = (tie <|> try articulation <|> try with <|> try cents <|> try noteCommand) <* whiteSpace
 
 tie :: Parser NoteItem
 tie = char '~' >> return Tie
