@@ -30,6 +30,11 @@ data Pitch3 = NoteName3 String String
     | Frequency3 Double
     deriving (Show)
 
+data Pitch5 = RegularNote PitchClass Octave (Maybe Accidental)
+    | Frequency5 PitchClass Octave Cents
+    | Error5 String
+    deriving (Show)
+
 data NoteItem1 = Tie
     | Articulation Char
     | NoteCommand String
@@ -62,7 +67,7 @@ type Tree1 = TreeX Pitch1 Dur1
 type Tree2 = TreeX Pitch1 Duration
 type Tree3 = TreeX Pitch3 Duration
 type Tree4 = TreeY Pitch3 Duration
-
+type Tree5 = TreeY Pitch5 Duration
 
 -- based on https://wiki.haskell.org/Parsing_a_simple_imperative_language
 
@@ -362,3 +367,15 @@ noteItem1to2 = f where
     f (NoteCommand s) = NoteCommand2 s
     f (With s)        = NoteCommand2 s
     f (Cents d) = Cents2 d
+
+
+lookupNoteName :: [(String,(PitchClass,Accidental))] -> Pitch3 -> Pitch5
+lookupNoteName table (NoteName3 base oct) = case (lookup base table) of
+        Nothing -> Error5 $ "unknown note name \""++base++"\"."
+        Just (pc, acc) -> RegularNote pc (getOct oct) (Just acc) where
+            getOct "" = 0
+            getOct s  = (length s) * (case (head s) of '\'' -> 1; ',' -> -1)
+lookupNoteName _ (Frequency3 freq) = Frequency5 A 0 0 -- TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+--addCents :: Pitch5 -> [NoteItem2] -> Pitch5
+
