@@ -30,24 +30,38 @@ data Pitch3 = NoteName3 String String
     | Frequency3 Double
     deriving (Show)
 
-data NoteItem = Tie 
+data NoteItem1 = Tie
     | Articulation Char
     | NoteCommand String
     | With String
     | Cents Double
     deriving (Show)
 
+data NoteItem2 = Tie2
+    | Articulation2 Char
+    | NoteCommand2 String
+    | LongCommand String String
+    | Cents2 Double
+    deriving (Show)
+
 data TreeX p d = Function String (TreeX p d)
     | Command String String (TreeX p d)
-    | Leaf p d [NoteItem]
+    | Leaf p d [NoteItem1]
     | Parallel [TreeX p d]
     | Sequential [TreeX p d]
     | Grace (TreeX p d) (TreeX p d)
     deriving (Show)
 
+data TreeY p d = LeafY p d [NoteItem2]
+    | ParallelY [TreeY p d]
+    | SequentialY [TreeY p d]
+    | GraceY (TreeY p d) (TreeY p d)
+    deriving (Show)
+
 type Tree1 = TreeX Pitch1 Dur1
 type Tree2 = TreeX Pitch1 Duration
 type Tree3 = TreeX Pitch3 Duration
+type Tree4 = TreeY Pitch3 Duration
 
 
 -- based on https://wiki.haskell.org/Parsing_a_simple_imperative_language
@@ -195,20 +209,20 @@ commonDur = do
 noDur :: Parser Dur1
 noDur = return NoDur
 
-noteItem :: Parser NoteItem
+noteItem :: Parser NoteItem1
 noteItem = (tie <|> try articulation <|> try with <|> try cents1 <|> try noteCommand) <* whiteSpace
 
-tie :: Parser NoteItem
+tie :: Parser NoteItem1
 tie = char '~' >> return Tie
 
-articulation :: Parser NoteItem
+articulation :: Parser NoteItem1
 articulation = do
     char '-'
     c <- oneOf "<>\\'+-!._,~/0123456789"
     return $ Articulation c
 
 
-with :: Parser NoteItem
+with :: Parser NoteItem1
 with = do
     string "\\with"
     whiteSpace
@@ -216,7 +230,7 @@ with = do
     whiteSpace
     return $ With cmd
 
-cents1 :: Parser NoteItem
+cents1 :: Parser NoteItem1
 cents1 = do
     string "\\cents"
     whiteSpace
@@ -239,7 +253,7 @@ integerFloat = do
     i <- integer
     return $ fromIntegral i
 
-noteCommand :: Parser NoteItem
+noteCommand :: Parser NoteItem1
 noteCommand =  do
     char '\\'
     name <- many1 alphaNum
@@ -324,4 +338,27 @@ splitChords = f where
     f (Leaf (Frequency1 hz) d noteitems)     = (Leaf (Frequency3 hz) d noteitems)
     f (Leaf (Chord1 ps) d noteitems) = Parallel [f $ Leaf p d noteitems | p <- ps]
 
+putCodeOnNotes :: Tree3 -> Tree4
+putCodeOnNotes = f where
+    f (Function s mus)      = addAnnotationToEveryNote (LongCommand (s++" { ") " } ") (f mus)
+    f (Command s t mus)     = addAnnotationToEveryNote (LongCommand s t) (f mus)
+    f (Parallel muss)       = ParallelY (map f muss)
+    f (Grace mus1 mus2)     = GraceY (f mus1) (f mus2)
+    f (Sequential muss)     = SequentialY (map f muss)
+    f (Leaf p d ni)         = LeafY p d (map noteItem1to2 ni)
 
+
+addAnnotationToEveryNote :: NoteItem2 -> Tree4 -> Tree4
+addAnnotationToEveryNote = f where
+    f ann (ParallelY muss)       = ParallelY (map (f ann) muss)
+    f ann (SequentialY muss)     = SequentialY (map (f ann) muss)
+    f ann (LeafY p d noteitems)  = LeafY p d (ann:noteitems)
+    f ann (GraceY mus1 mus2)     = GraceY (f ann mus1) (f ann mus2)
+
+noteItem1to2 :: NoteItem1 -> NoteItem2
+noteItem1to2 = f where
+    f Tie = Tie2
+    f (Articulation c) = Articulation2 c
+    f (NoteCommand s) = NoteCommand2 s
+    f (With s)        = NoteCommand2 s
+    f (Cents d) = Cents2 d
