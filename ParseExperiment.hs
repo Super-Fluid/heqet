@@ -299,12 +299,13 @@ lookupDur base = case (lookup base commonDurs) of
     Just d -> d
     Nothing -> error $ "unknown duration \""++base++"\". If you want an arbitrary rational duration, you need to prefix it with \"\\d\"."
 
-makeAllDurationsRational :: Tree1 -> Tree2
-makeAllDurationsRational (Function s mus) = Function s (map makeAllDurationsRational mus)
-makeAllDurationsRational (Command s t mus) = Command s t (map makeAllDurationsRational mus)
-makeAllDurationsRational (Leaf p d noteitems) = Leaf p (makeDurationRational d) noteitems
-makeAllDurationsRational (Voices muss) = Voices (map (map makeAllDurationsRational) muss)
-makeAllDurationsRational (Grace mus1 mus2) = Grace (map makeAllDurationsRational mus1) (map makeAllDurationsRational mus2)
+makeAllDurationsRational :: [Tree1] -> [Tree2]
+makeAllDurationsRational ts = map f ts where
+    f (Function s mus)      = Function s (makeAllDurationsRational mus)
+    f (Command s t mus)     = Command s t (makeAllDurationsRational mus)
+    f (Leaf p d noteitems)  = Leaf p (makeDurationRational d) noteitems
+    f (Voices muss)         = Voices (map makeAllDurationsRational muss)
+    f (Grace mus1 mus2)     = Grace (makeAllDurationsRational mus1) (makeAllDurationsRational mus2)
 
 makeDurationRational :: Dur1 -> Duration
 makeDurationRational (RationalDur r) = r
