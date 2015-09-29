@@ -21,7 +21,7 @@ data Dur1 = NoDur
     | CommonDur String Int -- will need to be looked up later
     deriving (Show)
 
-data Pitch1 = NoteName String String
+data Pitch1 = NoteName1 String String
     | Frequency1 Double
     | Chord1 [Pitch1]
     deriving (Show)
@@ -37,11 +37,12 @@ data NoteItem = Tie
     | Cents Double
     deriving (Show)
 
-data TreeX p d = Function String [TreeX p d]
-    | Command String String [TreeX p d]
+data TreeX p d = Function String (TreeX p d)
+    | Command String String (TreeX p d)
     | Leaf p d [NoteItem]
-    | Voices [[TreeX p d]]
-    | Grace [TreeX p d] [TreeX p d]
+    | Parallel [TreeX p d]
+    | Sequential [TreeX p d]
+    | Grace (TreeX p d) (TreeX p d)
     deriving (Show)
 
 type Tree1 = TreeX Pitch1 Dur1
@@ -68,15 +69,15 @@ float = Token.float lexer
 natural = Token.natural lexer
 integer = Token.integer lexer
 
-musicParser :: Parser [Tree1]
-musicParser = many tree <* eof
+musicParser :: Parser Tree1
+musicParser = tree <* eof
 
 tree :: Parser Tree1
 tree = do
     whiteSpace
-    r <- root
+    rs <- root `sepBy` whiteSpace
     whiteSpace
-    return r
+    return (Sequential rs)
 
 root :: Parser Tree1
 root = try function <|> try command <|> try leaf <|> voices1 <|> grace
@@ -89,7 +90,7 @@ function = do
     whiteSpace
     char '{'
     whiteSpace
-    music <- many (try tree)
+    music <- (try tree)
     whiteSpace
     char '}'
     whiteSpace
@@ -105,7 +106,7 @@ command = do
     whiteSpace
     char '{'
     whiteSpace
-    music <- many tree
+    music <- tree
     whiteSpace
     char '}'
     whiteSpace
@@ -127,7 +128,7 @@ noteName :: Parser Pitch1
 noteName = do
     name <- many1 lower
     oct <- many $ oneOf "',"
-    return $ NoteName name oct
+    return $ NoteName1 name oct
 
 frequency :: Parser Pitch1
 frequency = do
@@ -248,10 +249,10 @@ voices1 :: Parser Tree1
 voices1 = do 
     string "<<"
     whiteSpace
-    vs <- (braces (many $ try tree)) `sepBy` voicesSep
+    vs <- (braces (try tree)) `sepBy` voicesSep
     whiteSpace
     string ">>"
-    return $ Voices vs
+    return $ Parallel vs
 
 voicesSep :: Parser ()
 voicesSep = do
@@ -264,9 +265,9 @@ grace :: Parser Tree1
 grace = do
     string "\\grace"
     whiteSpace
-    g <- braces $ many tree
+    g <- braces $ tree
     whiteSpace
-    n <- braces $ many tree
+    n <- braces $ tree
     whiteSpace
     return $ Grace g n
 
@@ -299,16 +300,28 @@ lookupDur base = case (lookup base commonDurs) of
     Just d -> d
     Nothing -> error $ "unknown duration \""++base++"\". If you want an arbitrary rational duration, you need to prefix it with \"\\d\"."
 
-makeAllDurationsRational :: [Tree1] -> [Tree2]
-makeAllDurationsRational ts = map f ts where
-    f (Function s mus)      = Function s (makeAllDurationsRational mus)
-    f (Command s t mus)     = Command s t (makeAllDurationsRational mus)
+makeAllDurationsRational :: Tree1 -> Tree2
+makeAllDurationsRational = f where
+    f (Function s mus)      = Function s (f mus)
+    f (Command s t mus)     = Command s t (f mus)
     f (Leaf p d noteitems)  = Leaf p (makeDurationRational d) noteitems
-    f (Voices muss)         = Voices (map makeAllDurationsRational muss)
-    f (Grace mus1 mus2)     = Grace (makeAllDurationsRational mus1) (makeAllDurationsRational mus2)
+    f (Parallel muss)       = Parallel (map f muss)
+    f (Grace mus1 mus2)     = Grace (f mus1) (f mus2)
+    f (Sequential muss)     = Sequential (map f muss)
 
 makeDurationRational :: Dur1 -> Duration
 makeDurationRational (RationalDur r) = r
 makeDurationRational (CommonDur base dots) = addDots (lookupDur base) dots
 
--- splitChords :: Tree2 -> Tree3
+splitChords :: Tree2 -> Tree3
+splitChords = f where
+    f (Function s mus)      = Function s (f mus)
+    f (Command s t mus)     = Command s t (f mus)
+    f (Parallel muss)       = Parallel (map f muss)
+    f (Grace mus1 mus2)     = Grace (f mus1) (f mus2)
+    f (Sequential muss)     = Sequential (map f muss)
+    f (Leaf (NoteName1 pc oct) d noteitems)  = (Leaf (NoteName3 pc oct) d noteitems)
+    f (Leaf (Frequency1 hz) d noteitems)     = (Leaf (Frequency3 hz) d noteitems)
+    f (Leaf (Chord1 ps) d noteitems) = Parallel [f $ Leaf p d noteitems | p <- ps]
+
+
