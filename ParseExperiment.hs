@@ -12,6 +12,10 @@ import Language.Haskell.TH.Quote
 import Language.Haskell.TH 
 import Control.Applicative ((<*))
 import Types
+import Tables
+
+infixl &
+(&) = flip ($)
 
 type PitchStr = String
 type DurStr = String
@@ -290,10 +294,6 @@ grace = do
     whiteSpace
     return $ Grace g n
 
-
-demo :: QuasiQuoter
-demo = QuasiQuoter { quoteExp = \s -> [|  runParser musicParser () "" s |], quotePat = undefined, quoteType = undefined, quoteDec = undefined }
-
 --- TRANSFORMATIONS
 
 addDots :: Duration -> Int -> Duration
@@ -375,7 +375,22 @@ lookupNoteName table (NoteName3 base oct) = case (lookup base table) of
         Just (pc, acc) -> RegularNote pc (getOct oct) (Just acc) where
             getOct "" = 0
             getOct s  = (length s) * (case (head s) of '\'' -> 1; ',' -> -1)
-lookupNoteName _ (Frequency3 freq) = Frequency5 A 0 0 -- TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+lookupNoteName _ (Frequency3 freq) = let
+    halfSteps = logBase (2 ** (1/12)) (freq / 440)
+    cents = halfSteps - fromIntegral (truncate halfSteps) -- might be negative
+    (oct, pc) = ((truncate halfSteps) + 9) `divMod` 12
+    oct' = oct + 4 -- middle c is c4, has octN of 0
+    pc' = toEnum pc :: PitchClass
+    in Frequency5 pc' oct' cents
 
 --addCents :: Pitch5 -> [NoteItem2] -> Pitch5
+-- TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+allTransformations :: [(String,(PitchClass,Accidental))] -> Tree1 -> Tree4
+allTransformations table tree = tree 
+    & makeAllDurationsRational
+    & splitChords
+    & putCodeOnNotes
+
+test :: QuasiQuoter
+test = QuasiQuoter { quoteExp = \s -> [| runParser musicParser () "" s >>= (Right . allTransformations en) |], quotePat = undefined, quoteType = undefined, quoteDec = undefined }

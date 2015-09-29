@@ -54,7 +54,7 @@ instance (Show a) => Show (InTime a) where
 
 type Music' a = [(InTime a)] -- Invariant: must be sorted chronologically
 
-type Cents = Int
+type Cents = Double
 data Pitch = Pitch {
     _pc :: PitchClass 
   , _oct :: Octave 
