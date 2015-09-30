@@ -11,11 +11,10 @@ import qualified Text.ParserCombinators.Parsec.Token as Token
 import Language.Haskell.TH.Quote
 import Language.Haskell.TH 
 import Control.Applicative ((<*))
+import Control.Lens
+import Data.List (sortBy)
 import Types
 import Tables
-
-infixl &
-(&) = flip ($)
 
 type PitchStr = String
 type DurStr = String
@@ -61,17 +60,18 @@ data TreeX p d = Function String (TreeX p d)
     | Grace (TreeX p d) (TreeX p d)
     deriving (Show)
 
-data TreeY p d = LeafY p d [NoteItem2]
-    | ParallelY [TreeY p d]
-    | SequentialY [TreeY p d]
-    | GraceY (TreeY p d) (TreeY p d)
+data TreeY p d ni = LeafY p d [ni]
+    | ParallelY [TreeY p d ni]
+    | SequentialY [TreeY p d ni]
+    | GraceY (TreeY p d ni) (TreeY p d ni)
     deriving (Show)
 
 type Tree1 = TreeX Pitch1 Dur1
 type Tree2 = TreeX Pitch1 Duration
 type Tree3 = TreeX Pitch3 Duration
-type Tree4 = TreeY Pitch3 Duration
-type Tree5 = TreeY Pitch5 Duration
+type Tree4 = TreeY Pitch3 Duration NoteItem2
+type Tree5 = TreeY Pitch5 Duration NoteItem2
+type Tree6 = TreeY Pitch' Duration NoteItem2
 
 -- based on https://wiki.haskell.org/Parsing_a_simple_imperative_language
 
@@ -437,14 +437,60 @@ refinePitches (LeafY p3 d nis) = let
     (p5', nis') = addCents (p5, nis)
     p5'' = fixCents p5
     in LeafY p5'' d nis'
+{-
+data TreeY p d = LeafY p d [NoteItem2]
+    | ParallelY [TreeY p d]
+    | SequentialY [TreeY p d]
+    | GraceY (TreeY p d) (TreeY p d)
+    deriving (Show)
 
-allTransformations :: [(String,(PitchClass,Accidental))] -> Tree1 -> Tree5
+data Pitch' = RegPitch Pitch | Rest | Perc Perc
+    deriving (Eq,Show,Read)
+
+data Pitch = Pitch {
+    _pc :: PitchClass 
+  , _oct :: Octave 
+  , _cents :: Cents
+}
+
+data Note = Note { 
+      _pitch :: Pitch'
+    , _acc :: Accidental
+    , _noteCommands :: [NoteCommand]
+    , _exprCommands :: [ExprCommand] -- Note: head to tail == outer to inner commands
+    }
+-}
+
+pitch5toPitch :: Tree5 -> Tree6
+pitch5toPitch (ParallelY muss) = ParallelY (map pitch5toPitch muss)
+pitch5toPitch (SequentialY muss) = SequentialY (map pitch5toPitch muss)
+pitch5toPitch (GraceY mus1 mus2) = GraceY (pitch5toPitch mus1) (pitch5toPitch mus2)
+pitch5toPitch (LeafY p d nis) = LeafY (f p) d nis where
+    f (RegularNote pc oct cents maybeAcc) = RegPitch (Pitch { _pc = pc, _oct = oct, _cents = cents })
+    f (Frequency5 pc oct cents) = RegPitch (Pitch { _pc = pc, _oct = oct, _cents = cents })
+    f (Error5 s) = error "oops, errors aren't implemented yet"
+
+putInTime :: Tree6 -> Music' (Pitch',[NoteItem2])
+putInTime (GraceY mus1 mus2) = putInTime mus2 -- !!!!
+putInTime (LeafY p d nis) = [InTime { _val = (p,nis), _dur = d, _t = 0 }]
+putInTime (ParallelY muss) = sortBy (\n1 n2 -> (n1^.t) `compare` (n2^.t)) $ concat $ map putInTime muss
+putInTime (SequentialY muss) = fst $ foldl (\(accum, time) mus -> (accum++(shiftLate time $ putInTime mus),time + (durMu mus))) ([],0) muss where
+    shiftLate time itmus = map (\it -> it & t %~ (+time)) itmus
+    durMu :: Tree6 -> Duration
+    durMu (GraceY _ mus2) = durMu mus2
+    durMu (ParallelY muss) = maximum (map durMu muss)
+    durMu (SequentialY muss) = sum (map durMu muss)
+    durMu (LeafY _ d _) = d 
+
+allTransformations :: [(String,(PitchClass,Accidental))] -> Tree1 -> Music' (Pitch',[NoteItem2])
 allTransformations table tree = tree 
     & fillInMissingDurs
     & makeAllDurationsRational
     & splitChords
     & putCodeOnNotes
     & refinePitches
+    & pitch5toPitch
+    & putInTime
 
 test :: QuasiQuoter
 test = QuasiQuoter { quoteExp = \s -> [| runParser musicParser () "" s >>= (Right . allTransformations en) |], quotePat = undefined, quoteType = undefined, quoteDec = undefined }
