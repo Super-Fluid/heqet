@@ -15,18 +15,12 @@ data Music a =
     CommandPrevNote String a | 
     CommandNextNote String a
     
-    deriving (Show, Eq)
+    deriving (Show, Eq,Read)
 
 data PitchClass = C | Cs | D | Ds | E | F | Fs | G | Gs | A | As | B
-    deriving (Show, Eq, Ord, Enum, Bounded)
+    deriving (Show, Eq, Ord, Enum, Bounded, Read)
 data Accidental = DoubleFlat | Flat | Natural | Sharp | DoubleSharp
-    deriving (Eq, Ord, Enum, Bounded)
-instance Show Accidental where
-    show DoubleFlat = "bb"
-    show Flat = "b"
-    show Natural = "n"
-    show Sharp = "#"
-    show DoubleSharp = "x"
+    deriving (Eq, Ord, Enum, Bounded,Show,Read)
 
 type Octave = Int
 type Duration = Rational
@@ -36,21 +30,16 @@ data ExprCommand = ExprCommand {
     _begin :: String
   , _end :: String
   }
-  deriving (Eq)
+  deriving (Eq,Show,Read)
 makeLenses ''ExprCommand
-instance Show ExprCommand where
-    show cmd = "Command: \"" ++ cmd^.begin ++ " ... " ++ cmd^.end ++ "\""
 
 data InTime a = InTime {
     _val :: a
   , _dur :: Duration
   , _t :: PointInTime
     }
-    deriving (Eq)
+    deriving (Eq,Show,Read)
 makeLenses ''InTime
-
-instance (Show a) => Show (InTime a) where
-    show intime = (show $ intime^.val) ++ "[" ++ (show $ intime^.dur) ++ ", " ++ (show $ intime^.t) ++ "]"
 
 type Music' a = [(InTime a)] -- Invariant: must be sorted chronologically
 
@@ -60,22 +49,14 @@ data Pitch = Pitch {
   , _oct :: Octave 
   , _cents :: Cents
 }
-    deriving (Eq, Ord)
+    deriving (Eq, Ord, Show, Read)
 makeLenses ''Pitch
-
-instance Show Pitch where
-    show p = (show $ p^.pc) ++ (show $ p^.oct) ++ "~" ++ (show $ p^.cents)
 
 type Lyric = String
 type Perc = Pitch
 
 data Pitch' = RegPitch Pitch | Rest | Perc Perc
-    deriving (Eq)
-
-instance Show Pitch' where
-    show Rest = "Rest"
-    show (Perc p) = show p
-    show (RegPitch p) = show p
+    deriving (Eq,Show,Read)
 
 data Note = Note { 
       _pitch :: Pitch'
@@ -83,11 +64,8 @@ data Note = Note {
     , _noteCommands :: [NoteCommand]
     , _exprCommands :: [ExprCommand] -- Note: head to tail == outer to inner commands
     }
-    deriving (Eq)
+    deriving (Eq, Show, Read)
 makeLenses ''Note
-
-instance Show Note where
-    show n = (show $ n^.pitch) ++ (show $ n^.acc) ++ " " ++  (show $ n^.noteCommands) ++ (show $ n^.exprCommands)
 
 data Instrument = Instrument { 
       _midiInstrument :: String
@@ -104,18 +82,19 @@ data Instrument = Instrument {
 makeLenses ''Instrument
 
 instance Show Instrument where
-    show i = "Instrument: " ++ i^.name
+    show ins = "<Instrument " ++ ins^.name ++ ">"
+
 instance Eq Instrument where
     i == j = i^.kind == j^.kind
 
 type Instruments = [Instrument]
 
 data StaffName = Auto | Manual String
-    deriving (Show, Eq)
+    deriving (Show, Eq, Read)
 data Voice = Voice (Music Note)
-    deriving (Show, Eq)
+    deriving (Show, Eq, Read)
 data StaffType = DrumStaff | TabStaff | CommonStaff
-    deriving (Show, Eq)
+    deriving (Show, Eq, Read)
 data Staff = Staff { _staffType :: StaffType
                    , _voices :: [Voice]
                    , _inss :: Instruments
