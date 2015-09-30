@@ -24,7 +24,7 @@ data Accidental = DoubleFlat | Flat | Natural | Sharp | DoubleSharp
 instance Show Accidental where
     show DoubleFlat = "bb"
     show Flat = "b"
-    show Natural = ""
+    show Natural = "n"
     show Sharp = "#"
     show DoubleSharp = "x"
 

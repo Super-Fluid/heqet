@@ -34,7 +34,7 @@ data Pitch3 = NoteName3 String String
     | Frequency3 Double
     deriving (Show)
 
-data Pitch5 = RegularNote PitchClass Octave (Maybe Accidental)
+data Pitch5 = RegularNote PitchClass Octave Cents (Maybe Accidental)
     | Frequency5 PitchClass Octave Cents
     | Error5 String
     deriving (Show)
@@ -328,9 +328,22 @@ makeAllDurationsRational = f where
     f (Grace mus1 mus2)     = Grace (f mus1) (f mus2)
     f (Sequential muss)     = Sequential (map f muss)
 
+fillInMissingDurs :: Tree1 -> Tree1
+fillInMissingDurs t = fst $ f (CommonDur "4" 0) t where
+    f d (Function s mus) = (Function s (fst $ f d mus), snd $ f d mus)
+    f d (Command s t mus) = (Command s t (fst $ f d mus), snd $ f d mus)
+    f d (Parallel muss) = (Parallel (fst results), snd results) where
+        results = foldr (\mus (accum,_) -> ((fst $ f d mus):accum,(snd $ f d mus))) ([],d) muss
+    f d (Grace mus1 mus2) = (Grace (fst $ f (CommonDur "8" 0) mus1) (fst $ f d mus2), snd $ f d mus2)
+    f d (Sequential muss) = (Sequential (fst results), snd results) where
+        results = foldr (\mus (accum,lastdur) -> ((fst $ f lastdur mus):accum,(snd $ f lastdur mus))) ([],d) muss
+    f d (Leaf p NoDur nis) = (Leaf p d nis, d)
+    f _ (Leaf p dur nis) = (Leaf p dur nis, dur)
+
 makeDurationRational :: Dur1 -> Duration
 makeDurationRational (RationalDur r) = r
 makeDurationRational (CommonDur base dots) = addDots (lookupDur base) dots
+makeDurationRational NoDur = error "can't happen: note without dur after applying durs"
 
 splitChords :: Tree2 -> Tree3
 splitChords = f where
@@ -372,9 +385,9 @@ noteItem1to2 = f where
 lookupNoteName :: [(String,(PitchClass,Accidental))] -> Pitch3 -> Pitch5
 lookupNoteName table (NoteName3 base oct) = case (lookup base table) of
         Nothing -> Error5 $ "unknown note name \""++base++"\"."
-        Just (pc, acc) -> RegularNote pc (getOct oct) (Just acc) where
-            getOct "" = 0
-            getOct s  = (length s) * (case (head s) of '\'' -> 1; ',' -> -1)
+        Just (pc, acc) -> RegularNote pc (getOct oct) 0 (Just acc) where
+            getOct "" = 2
+            getOct s  = 2 + (length s) * (case (head s) of '\'' -> 1; ',' -> -1)
 lookupNoteName _ (Frequency3 freq) = let
     halfSteps = logBase (2 ** (1/12)) (freq / 440)
     fractional = halfSteps - fromIntegral (truncate halfSteps) -- might be negative
@@ -402,14 +415,36 @@ rewriteDownHalfstep (pc, oct) =
     then (B, oct-1)
     else (toEnum $ fromEnum pc - 1, oct)
 
---addCents :: Pitch5 -> [NoteItem2] -> Pitch5
--- TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+addCents :: (Pitch5,[NoteItem2]) -> (Pitch5,[NoteItem2])
+addCents (p, []) = (p, [])
+addCents (RegularNote pc oct cents maybeAcc, (Cents2 d):nis) =
+    addCents (RegularNote pc oct (cents+d) maybeAcc, nis)
+addCents (p, nis) = (p, nis)
 
-allTransformations :: [(String,(PitchClass,Accidental))] -> Tree1 -> Tree4
+fixCents :: Pitch5 -> Pitch5
+fixCents (RegularNote pc oct cents maybeAcc) = 
+    if cents > 50 || cents < -50
+    then lookupNoteName [] (Frequency3 (((2 ** (1/12)) ** ((fromIntegral $ fromEnum pc) + ((fromIntegral oct - 4) * 12))) * 440))
+    else RegularNote pc oct cents maybeAcc
+fixCents p = p
+
+refinePitches :: Tree4 -> Tree5
+refinePitches (ParallelY ts) = ParallelY (map refinePitches ts)
+refinePitches (SequentialY ts) = SequentialY (map refinePitches ts)
+refinePitches (GraceY t1 t2) = GraceY (refinePitches t1) (refinePitches t2)
+refinePitches (LeafY p3 d nis) = let
+    p5 = lookupNoteName en p3
+    (p5', nis') = addCents (p5, nis)
+    p5'' = fixCents p5
+    in LeafY p5'' d nis'
+
+allTransformations :: [(String,(PitchClass,Accidental))] -> Tree1 -> Tree5
 allTransformations table tree = tree 
+    & fillInMissingDurs
     & makeAllDurationsRational
     & splitChords
     & putCodeOnNotes
+    & refinePitches
 
 test :: QuasiQuoter
 test = QuasiQuoter { quoteExp = \s -> [| runParser musicParser () "" s >>= (Right . allTransformations en) |], quotePat = undefined, quoteType = undefined, quoteDec = undefined }
