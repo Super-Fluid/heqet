@@ -377,11 +377,30 @@ lookupNoteName table (NoteName3 base oct) = case (lookup base table) of
             getOct s  = (length s) * (case (head s) of '\'' -> 1; ',' -> -1)
 lookupNoteName _ (Frequency3 freq) = let
     halfSteps = logBase (2 ** (1/12)) (freq / 440)
-    cents = halfSteps - fromIntegral (truncate halfSteps) -- might be negative
+    fractional = halfSteps - fromIntegral (truncate halfSteps) -- might be negative
     (oct, pc) = ((truncate halfSteps) + 9) `divMod` 12
-    oct' = oct + 4 -- middle c is c4, has octN of 0
+    oct' = oct + 4 -- middle c is c4, has oct of 0
     pc' = toEnum pc :: PitchClass
-    in Frequency5 pc' oct' cents
+    cents = fractional * 100 -- cents was a portion of a halfstep, this is # of cents
+    ((pc'', oct''), cents'') = 
+        if cents > 50
+        then (rewriteUpHalfstep (pc', oct'), cents - 100)
+        else if cents < -50
+        then (rewriteDownHalfstep (pc', oct'), cents + 100)
+        else ((pc', oct'), cents)
+    in Frequency5 pc'' oct'' cents''
+
+rewriteUpHalfstep :: (PitchClass,Octave) -> (PitchClass,Octave)
+rewriteUpHalfstep (pc, oct) = 
+    if pc == B
+    then (C, oct+1)
+    else (toEnum $ fromEnum pc + 1, oct)
+
+rewriteDownHalfstep :: (PitchClass,Octave) -> (PitchClass,Octave)
+rewriteDownHalfstep (pc, oct) = 
+    if pc == C
+    then (B, oct-1)
+    else (toEnum $ fromEnum pc - 1, oct)
 
 --addCents :: Pitch5 -> [NoteItem2] -> Pitch5
 -- TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
