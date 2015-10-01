@@ -8,21 +8,22 @@ import Data.Maybe (fromJust,isJust)
 import Data.Tuple (swap)
 import Data.List (concat, intersperse)
 
-testRender :: Music' Note -> String
+testRender :: Music -> String
 testRender mu = "\\version \"2.16.2\"\n\\language \"english\"\n\\score {\n\\new Staff \\with {\nmidiInstrument = \"bassoon\"\n} { \n\\once \\override Staff.TimeSignature #'stencil = ##f \n\\clef bass\n\\cadenzaOn " ++ (listRender mu) ++ "\n\\cadenzaOff\n \\bar \"|\"\n}\\layout { }\n\\midi { }\n}"
 
-listRender :: Music' Note -> String
+listRender :: Music -> String
 listRender intimes = concat $ intersperse " " $ map toLy $ map (\i -> (i^.val,i^.dur)) intimes
 
 toLy (note,dur) = renderPitch (note^.pitch) (note^.acc) ++ renderDuration (dur)
 
-renderPitch :: Pitch' -> Accidental -> String
-renderPitch (RegPitch p) acc = renderPitchAcc (p^.pc) acc ++ renderOct (p^.oct)
+renderPitch :: Ly -> (Maybe Accidental) -> String
+renderPitch (Pitch p) acc = renderPitchAcc (p^.pc) acc ++ renderOct (p^.oct)
 renderPitch Rest _ = "r"
 renderPitch (Perc p) _ = "c"
 
-renderPitchAcc :: PitchClass -> Accidental -> String
-renderPitchAcc pc acc = fromJust $ lookup (pc,acc) (map swap Tables.en)
+renderPitchAcc :: PitchClass -> (Maybe Accidental) -> String
+renderPitchAcc pc (Just acc) = fromJust $ lookup (pc,acc) (map swap Tables.en)
+renderPitchAcc pc Nothing = fromJust $ lookup pc (map (\((p,a),s) -> (p,s)) (map swap Tables.en))
 
 commonDurations :: [(Duration,String)]
 commonDurations = [
