@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, DeriveFunctor #-}
 
 module Types where
 
@@ -28,7 +28,7 @@ data InTime a = InTime {
   , _dur :: Duration
   , _t :: PointInTime
     }
-    deriving (Eq,Show,Read)
+    deriving (Eq,Show,Read,Functor)
 
 type Cents = Double
 data Pitch = MakePitch {
@@ -79,6 +79,7 @@ data Note a = Note {
     , _nonDistCommands :: [ExprCommand]
     , _errors :: [MusicError]
     , _isSlurred :: Bool
+    , _isTied :: Bool
     , _dynamic :: Maybe Dynamic
     , _artics :: [SimpleArticulation] -- all other articulations are noteCommands
     , _tags :: [(String,String)]

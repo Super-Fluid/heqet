@@ -13,6 +13,7 @@ import Language.Haskell.TH
 import Control.Applicative ((<*))
 import Control.Lens
 import Data.List (sortBy)
+import Data.Maybe (fromJust)
 import Types hiding (chord)
 import Tables
 
@@ -459,7 +460,48 @@ putInTime (SequentialY muss) = fst $ foldl (\(accum, time) mus -> (accum++(shift
     durMu (SequentialY muss) = sum (map durMu muss)
     durMu (LeafY _ d _) = d 
 
-allTransformations :: [(String,(PitchClass,Accidental))] -> Tree1 -> [InTime (Pitch,[NoteItem2])]
+placeNoteItems :: (Pitch, [NoteItem2]) -> (Note Ly)
+placeNoteItems (p, nis) = let baseNote = Note {
+      _pitch = Pitch p
+    , _acc = Natural -- ARGh TODO !!!!!
+    , _noteCommands = []
+    , _exprCommands = []
+    , _nonDistCommands = []
+    , _errors = []
+    , _isSlurred = False
+    , _isTied = False
+    , _dynamic = Nothing
+    , _artics = []
+    , _tags = []
+    , _clef = Nothing
+    , _inst = Nothing
+    , _chord = Nothing
+    , _key = Nothing
+    }
+    in foldl f baseNote nis where
+        f bn Tie2 = bn & isTied .~ True
+        f bn (Articulation2 c) = if (isSimpleArt c)
+                                 then bn & artics %~ ((getSimpleArt c):)
+                                 else bn & noteCommands %~ (("-" ++ [c]):)
+        f bn (NoteCommand2 s) = bn & noteCommands %~ (s:)
+        f bn (LongCommand s t) = bn & exprCommands %~ ((ExprCommand {_begin = s, _end = t}):)
+        f bn (Cents2 _) = bn -- we have already dealt with the cents. (todo: refactor this line away)
+
+isSimpleArt c = c `elem` ".->^+_!"
+getSimpleArt c = fromJust $ lookup c [
+    ('.', Staccato)
+   ,('-', Tenuto)
+   ,('>', Accent)
+   ,('+', Stopped)
+   ,('_', Portato)
+   ,('!', Staccatissimo)
+   ,('^', Marcato)
+   ]
+
+placeAllNoteItems :: [InTime (Pitch,[NoteItem2])] -> Music
+placeAllNoteItems = map (fmap placeNoteItems)
+
+allTransformations :: [(String,(PitchClass,Accidental))] -> Tree1 -> Music
 allTransformations table tree = tree 
     & fillInMissingDurs
     & makeAllDurationsRational
@@ -468,6 +510,7 @@ allTransformations table tree = tree
     & refinePitches
     & pitch5toPitch
     & putInTime
+    & placeAllNoteItems
 
 test :: QuasiQuoter
 test = QuasiQuoter { quoteExp = \s -> [| runParser musicParser () "" s >>= (Right . allTransformations en) |], quotePat = undefined, quoteType = undefined, quoteDec = undefined }
