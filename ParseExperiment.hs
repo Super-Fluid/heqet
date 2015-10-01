@@ -429,12 +429,12 @@ fixCents (RegularNote pc oct cents maybeAcc) =
     else RegularNote pc oct cents maybeAcc
 fixCents p = p
 
-refinePitches :: Tree4 -> Tree5
-refinePitches (ParallelY ts) = ParallelY (map refinePitches ts)
-refinePitches (SequentialY ts) = SequentialY (map refinePitches ts)
-refinePitches (GraceY t1 t2) = GraceY (refinePitches t1) (refinePitches t2)
-refinePitches (LeafY p3 d nis) = let
-    p5 = lookupNoteName en p3
+refinePitches :: [(String,(PitchClass,Accidental))] -> Tree4 -> Tree5
+refinePitches table (ParallelY ts) = ParallelY (map (refinePitches table) ts)
+refinePitches table (SequentialY ts) = SequentialY (map (refinePitches table) ts)
+refinePitches table (GraceY t1 t2) = GraceY (refinePitches table t1) (refinePitches table t2)
+refinePitches table (LeafY p3 d nis) = let
+    p5 = lookupNoteName table p3
     (p5', nis') = addCents (p5, nis)
     p5'' = fixCents p5
     in LeafY p5'' d nis'
@@ -461,23 +461,7 @@ putInTime (SequentialY muss) = fst $ foldl (\(accum, time) mus -> (accum++(shift
     durMu (LeafY _ d _) = d 
 
 placeNoteItems :: (Pitch, [NoteItem2]) -> (Note Ly)
-placeNoteItems (p, nis) = let baseNote = Note {
-      _pitch = Pitch p
-    , _acc = Natural -- ARGh TODO !!!!!
-    , _noteCommands = []
-    , _exprCommands = []
-    , _nonDistCommands = []
-    , _errors = []
-    , _isSlurred = False
-    , _isTied = False
-    , _dynamic = Nothing
-    , _artics = []
-    , _tags = []
-    , _clef = Nothing
-    , _inst = Nothing
-    , _chord = Nothing
-    , _key = Nothing
-    }
+placeNoteItems (p, nis) = let baseNote = emptyNote { _pitch = (Pitch p) }
     in foldl f baseNote nis where
         f bn Tie2 = bn & isTied .~ True
         f bn (Articulation2 c) = if (isSimpleArt c)
@@ -507,10 +491,14 @@ allTransformations table tree = tree
     & makeAllDurationsRational
     & splitChords
     & putCodeOnNotes
-    & refinePitches
+    & refinePitches table
     & pitch5toPitch
     & putInTime
     & placeAllNoteItems
 
+handleParseError :: Either ParseError Music -> Music
+handleParseError (Left pe) = [InTime { _val = (emptyNote { _errors = [show pe]}), _dur = 0, _t = 0}]
+handleParseError (Right mus) = mus
+
 test :: QuasiQuoter
-test = QuasiQuoter { quoteExp = \s -> [| runParser musicParser () "" s >>= (Right . allTransformations en) |], quotePat = undefined, quoteType = undefined, quoteDec = undefined }
+test = QuasiQuoter { quoteExp = \s -> [| handleParseError $ runParser musicParser () "" s >>= (Right . allTransformations en) |], quotePat = undefined, quoteType = undefined, quoteDec = undefined }

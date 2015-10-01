@@ -73,7 +73,7 @@ instance Eq Instrument where
 
 data Note a = Note { 
       _pitch :: a
-    , _acc :: Accidental
+    , _acc :: Maybe Accidental
     , _noteCommands :: [NoteCommand]
     , _exprCommands :: [ExprCommand] -- Note: head to tail == outer to inner commands
     , _nonDistCommands :: [ExprCommand]
@@ -89,6 +89,25 @@ data Note a = Note {
     , _key :: Maybe Key
     }
     deriving (Eq, Show)
+
+emptyNote :: Note Ly
+emptyNote = Note {
+      _pitch = Effect
+    , _acc = Nothing
+    , _noteCommands = []
+    , _exprCommands = []
+    , _nonDistCommands = []
+    , _errors = []
+    , _isSlurred = False
+    , _isTied = False
+    , _dynamic = Nothing
+    , _artics = []
+    , _tags = []
+    , _clef = Nothing
+    , _inst = Nothing
+    , _chord = Nothing
+    , _key = Nothing
+    }
 
 data Ly = Pitch Pitch | Rest | Perc Perc | Effect | Lyric Lyric
     deriving (Eq,Show,Read)
