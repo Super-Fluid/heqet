@@ -4,34 +4,24 @@ module Types where
 
 import Control.Lens
 
-
-data Music a = 
-    SingleNote Duration a | 
-    Par (Music a) (Music a) | 
-    Seq (Music a) (Music a) |
-    Error String (Music a) | 
-    CommandMusicExpression String (Music a) |
-    CommandStartStop String String (Music a) | 
-    CommandPrevNote String a | 
-    CommandNextNote String a
-    
-    deriving (Show, Eq,Read)
-
 data PitchClass = C | Cs | D | Ds | E | F | Fs | G | Gs | A | As | B
     deriving (Show, Eq, Ord, Enum, Bounded, Read)
-data Accidental = DoubleFlat | Flat | Natural | Sharp | DoubleSharp
+data RelativePitchClass = I | IIb | II | IIIb | III | IV | Vb | V | VIb | VI | VIIb | VII
+    deriving (Show, Eq, Ord, Enum, Bounded, Read)
+data Accidental = DoubleFlat | Flat | Natural | Sharp | DoubleSharp 
     deriving (Eq, Ord, Enum, Bounded,Show,Read)
 
 type Octave = Int
 type Duration = Rational
 type PointInTime = Rational
+type PerformanceDuration = Double -- in seconds
+type PointInPerformance = Double -- in seconds
 type NoteCommand = String
 data ExprCommand = ExprCommand {
     _begin :: String
   , _end :: String
   }
   deriving (Eq,Show,Read)
-makeLenses ''ExprCommand
 
 data InTime a = InTime {
     _val :: a
@@ -39,87 +29,74 @@ data InTime a = InTime {
   , _t :: PointInTime
     }
     deriving (Eq,Show,Read)
-makeLenses ''InTime
-
-type Music' a = [(InTime a)] -- Invariant: must be sorted chronologically
 
 type Cents = Double
-data Pitch = Pitch {
+data Pitch = MakePitch {
     _pc :: PitchClass 
   , _oct :: Octave 
   , _cents :: Cents
 }
     deriving (Eq, Ord, Show, Read)
-makeLenses ''Pitch
-
-type Lyric = String
-type Perc = Pitch
-
-data Pitch' = RegPitch Pitch | Rest | Perc Perc
-    deriving (Eq,Show,Read)
-
-data Note = Note { 
-      _pitch :: Pitch'
-    , _acc :: Accidental
-    , _noteCommands :: [NoteCommand]
-    , _exprCommands :: [ExprCommand] -- Note: head to tail == outer to inner commands
-    }
-    deriving (Eq, Show, Read)
-makeLenses ''Note
 
 data Instrument = Instrument { 
       _midiInstrument :: String
---  , available_notes :: Either range set
---  , pick_up_time :: ?
---  , put_down_time :: ?
-    , _annotatePlayability :: (Music Note) -> (Music Note)
-    , _assignClefs :: (Music Note) -> (Music Note)
+    , _pickUpTime :: PerformanceDuration
+    , _putDownTime :: PerformanceDuration
+    , _annotatePlayability :: Music -> Music
+    , _assignClefs :: Music -> Music
     , _transposition :: Pitch
     , _name :: String
     , _shortName :: String
     , _kind :: String
     }
-makeLenses ''Instrument
+
+type Lyric = String
+type Perc = String -- !!! Need something better
+type MusicError = String
+type Dynamic = Double -- between 0 and 1
+data SimpleArticulation = Marcato | Stopped | Tenuto | Staccatissimo | Accent | Staccato | Portato
+    deriving (Eq, Show, Read)
+data Clef = Treble | Alto | Treble8 | Tenor | Bass | CustomClef String
+    deriving (Eq, Show, Read)
+type Chord = (RelativePitchClass, ChordFlavor)
+data ChordFlavor = MajorC | MinorC | Diminished | Augmented | MajorMinor
+    deriving (Eq, Show, Read)
+type Key = (PitchClass, Mode)
+data Mode = MajorM | MinorM -- | MajorBlues | MinorBlues | Dorian | Lydian | etc
+    deriving (Eq, Show, Read)
 
 instance Show Instrument where
-    show ins = "<Instrument " ++ ins^.name ++ ">"
+    show ins = "<Instrument " ++ (_name ins) ++ ">"
 
 instance Eq Instrument where
-    i == j = i^.kind == j^.kind
+    i == j = (_kind i) == (_kind j)
 
-type Instruments = [Instrument]
+data Note a = Note { 
+      _pitch :: a
+    , _acc :: Accidental
+    , _noteCommands :: [NoteCommand]
+    , _exprCommands :: [ExprCommand] -- Note: head to tail == outer to inner commands
+    , _nonDistCommands :: [ExprCommand]
+    , _errors :: [MusicError]
+    , _isSlurred :: Bool
+    , _dynamic :: Maybe Dynamic
+    , _artics :: [SimpleArticulation] -- all other articulations are noteCommands
+    , _tags :: [(String,String)]
+    , _clef :: Maybe Clef
+    , _inst :: Maybe Instrument
+    , _chord :: Maybe Chord
+    , _key :: Maybe Key
+    }
+    deriving (Eq, Show)
 
-data StaffName = Auto | Manual String
-    deriving (Show, Eq, Read)
-data Voice = Voice (Music Note)
-    deriving (Show, Eq, Read)
-data StaffType = DrumStaff | TabStaff | CommonStaff
-    deriving (Show, Eq, Read)
-data Staff = Staff { _staffType :: StaffType
-                   , _voices :: [Voice]
-                   , _inss :: Instruments
-                   , _staffName :: StaffName
-                   }
-    deriving (Show)
-makeLenses ''Staff
-data StaffOrStaffGroup = SingleStaff Staff | GroupOfStaves StaffGroup
-    deriving (Show)
-data StaffGroupType = ChoirStaff | GrandStaff | PlainGroup | PianoStaff
-    deriving (Show, Eq)
-data StaffGroup = StaffGroup { _staffGroupType :: StaffGroupType
-                             , _staves :: [StaffOrStaffGroup]
-                             , _staffGroupName :: StaffName 
-                             }
-    deriving (Show)
-makeLenses ''StaffGroup
-type Header = String
-data BookPart = Markup String | Score Header StaffOrStaffGroup
-    deriving (Show)
-type Book = [BookPart]
+data Ly = Pitch Pitch | Rest | Perc Perc | Effect | Lyric Lyric
+    deriving (Eq,Show,Read)
 
-----
+type MusicOf a = [(InTime (Note a))] -- Invariant: must be sorted chronologically
+type Music = MusicOf Ly
 
-data Transpositionality = Concert | TruePitch | Transposed
--- Concert scores still transpose some instruments by octaves (bass, piccolo, celeste, guitar)
-
-type Piece = [(Music' Note)]
+makeLenses ''InTime
+makeLenses ''ExprCommand
+makeLenses ''Pitch
+makeLenses ''Note
+makeLenses ''Instrument
