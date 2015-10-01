@@ -13,7 +13,7 @@ import Language.Haskell.TH
 import Control.Applicative ((<*))
 import Control.Lens
 import Data.List (sortBy)
-import Types
+import Types hiding (chord)
 import Tables
 
 type PitchStr = String
@@ -71,7 +71,7 @@ type Tree2 = TreeX Pitch1 Duration
 type Tree3 = TreeX Pitch3 Duration
 type Tree4 = TreeY Pitch3 Duration NoteItem2
 type Tree5 = TreeY Pitch5 Duration NoteItem2
-type Tree6 = TreeY Pitch' Duration NoteItem2
+type Tree6 = TreeY Pitch  Duration NoteItem2
 
 -- based on https://wiki.haskell.org/Parsing_a_simple_imperative_language
 
@@ -443,11 +443,11 @@ pitch5toPitch (ParallelY muss) = ParallelY (map pitch5toPitch muss)
 pitch5toPitch (SequentialY muss) = SequentialY (map pitch5toPitch muss)
 pitch5toPitch (GraceY mus1 mus2) = GraceY (pitch5toPitch mus1) (pitch5toPitch mus2)
 pitch5toPitch (LeafY p d nis) = LeafY (f p) d nis where
-    f (RegularNote pc oct cents maybeAcc) = RegPitch (Pitch { _pc = pc, _oct = oct, _cents = cents })
-    f (Frequency5 pc oct cents) = RegPitch (Pitch { _pc = pc, _oct = oct, _cents = cents })
+    f (RegularNote pc oct cents maybeAcc) = (MakePitch { _pc = pc, _oct = oct, _cents = cents })
+    f (Frequency5 pc oct cents) = MakePitch { _pc = pc, _oct = oct, _cents = cents }
     f (Error5 s) = error "oops, errors aren't implemented yet"
 
-putInTime :: Tree6 -> Music' (Pitch',[NoteItem2])
+putInTime :: Tree6 -> [InTime (Pitch,[NoteItem2])]
 putInTime (GraceY mus1 mus2) = putInTime mus2 -- !!!!
 putInTime (LeafY p d nis) = [InTime { _val = (p,nis), _dur = d, _t = 0 }]
 putInTime (ParallelY muss) = sortBy (\n1 n2 -> (n1^.t) `compare` (n2^.t)) $ concat $ map putInTime muss
@@ -459,7 +459,7 @@ putInTime (SequentialY muss) = fst $ foldl (\(accum, time) mus -> (accum++(shift
     durMu (SequentialY muss) = sum (map durMu muss)
     durMu (LeafY _ d _) = d 
 
-allTransformations :: [(String,(PitchClass,Accidental))] -> Tree1 -> Music' (Pitch',[NoteItem2])
+allTransformations :: [(String,(PitchClass,Accidental))] -> Tree1 -> [InTime (Pitch,[NoteItem2])]
 allTransformations table tree = tree 
     & fillInMissingDurs
     & makeAllDurationsRational
