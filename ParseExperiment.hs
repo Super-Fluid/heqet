@@ -437,29 +437,6 @@ refinePitches (LeafY p3 d nis) = let
     (p5', nis') = addCents (p5, nis)
     p5'' = fixCents p5
     in LeafY p5'' d nis'
-{-
-data TreeY p d = LeafY p d [NoteItem2]
-    | ParallelY [TreeY p d]
-    | SequentialY [TreeY p d]
-    | GraceY (TreeY p d) (TreeY p d)
-    deriving (Show)
-
-data Pitch' = RegPitch Pitch | Rest | Perc Perc
-    deriving (Eq,Show,Read)
-
-data Pitch = Pitch {
-    _pc :: PitchClass 
-  , _oct :: Octave 
-  , _cents :: Cents
-}
-
-data Note = Note { 
-      _pitch :: Pitch'
-    , _acc :: Accidental
-    , _noteCommands :: [NoteCommand]
-    , _exprCommands :: [ExprCommand] -- Note: head to tail == outer to inner commands
-    }
--}
 
 pitch5toPitch :: Tree5 -> Tree6
 pitch5toPitch (ParallelY muss) = ParallelY (map pitch5toPitch muss)
