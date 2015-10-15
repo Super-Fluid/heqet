@@ -115,6 +115,12 @@ data Ly = Pitch Pitch | Rest | Perc Perc | Effect | Lyric Lyric
 type MusicOf a = [(InTime (Note a))] -- Invariant: must be sorted chronologically
 type Music = MusicOf Ly
 
+type Beat = Rational
+type Measure = [Beat]
+type MeasureTrack = [Measure]
+
+type Tempo = (PointInTime -> PointInPerformance)
+
 makeLenses ''InTime
 makeLenses ''ExprCommand
 makeLenses ''Pitch
