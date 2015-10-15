@@ -1,6 +1,6 @@
 {-# LANGUAGE QuasiQuotes #-}
 
-module Heget where
+module Heqet where
 
 import Parse
 import Types
