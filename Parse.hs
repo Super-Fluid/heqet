@@ -37,6 +37,7 @@ data Pitch3 = NoteName3 String String
 data Pitch5 = RegularNote PitchClass Octave Cents (Maybe Accidental)
     | Frequency5 PitchClass Octave Cents
     | Error5 String
+    | Rest5
     deriving (Show)
 
 data NoteItem1 = Tie
@@ -72,7 +73,7 @@ type Tree2 = TreeX Pitch1 Duration
 type Tree3 = TreeX Pitch3 Duration
 type Tree4 = TreeY Pitch3 Duration NoteItem2
 type Tree5 = TreeY Pitch5 Duration NoteItem2
-type Tree6 = TreeY Pitch  Duration NoteItem2
+type Tree6 = TreeY Ly  Duration NoteItem2
 
 -- based on https://wiki.haskell.org/Parsing_a_simple_imperative_language
 
@@ -384,6 +385,7 @@ noteItem1to2 = f where
 
 
 lookupNoteName :: [(String,(PitchClass,Accidental))] -> Pitch3 -> Pitch5
+lookupNoteName _ (NoteName3 "r" _) = Rest5
 lookupNoteName table (NoteName3 base oct) = case (lookup base table) of
         Nothing -> Error5 $ "unknown note name \""++base++"\"."
         Just (pc, acc) -> RegularNote pc (getOct oct) 0 (Just acc) where
@@ -444,13 +446,14 @@ pitch5toPitch (ParallelY muss) = ParallelY (map pitch5toPitch muss)
 pitch5toPitch (SequentialY muss) = SequentialY (map pitch5toPitch muss)
 pitch5toPitch (GraceY mus1 mus2) = GraceY (pitch5toPitch mus1) (pitch5toPitch mus2)
 pitch5toPitch (LeafY p d nis) = LeafY (f p) d nis where
-    f (RegularNote pc oct cents maybeAcc) = (MakePitch { _pc = pc, _oct = oct, _cents = cents })
-    f (Frequency5 pc oct cents) = MakePitch { _pc = pc, _oct = oct, _cents = cents }
+    f (RegularNote pc oct cents maybeAcc) = Pitch (MakePitch { _pc = pc, _oct = oct, _cents = cents })
+    f (Frequency5 pc oct cents) = Pitch $ MakePitch { _pc = pc, _oct = oct, _cents = cents }
+    f (Rest5) = Rest
     f (Error5 s) = error "oops, errors aren't implemented yet"
 
-putInTime :: Tree6 -> [InTime (Pitch,[NoteItem2])]
+putInTime :: Tree6 -> [InTime (Ly,[NoteItem2])]
 putInTime (GraceY mus1 mus2) = putInTime mus2 -- !!!!
-putInTime (LeafY p d nis) = [InTime { _val = (p,nis), _dur = d, _t = 0 }]
+putInTime (LeafY ly d nis) = [InTime { _val = (ly,nis), _dur = d, _t = 0 }]
 putInTime (ParallelY muss) = sortBy (\n1 n2 -> (n1^.t) `compare` (n2^.t)) $ concat $ map putInTime muss
 putInTime (SequentialY muss) = fst $ foldl (\(accum, time) mus -> (accum++(shiftLate time $ putInTime mus),time + (durMu mus))) ([],0) muss where
     shiftLate time itmus = map (\it -> it & t %~ (+time)) itmus
@@ -460,8 +463,8 @@ putInTime (SequentialY muss) = fst $ foldl (\(accum, time) mus -> (accum++(shift
     durMu (SequentialY muss) = sum (map durMu muss)
     durMu (LeafY _ d _) = d 
 
-placeNoteItems :: (Pitch, [NoteItem2]) -> (Note Ly)
-placeNoteItems (p, nis) = let baseNote = emptyNote { _pitch = (Pitch p) }
+placeNoteItems :: (Ly, [NoteItem2]) -> (Note Ly)
+placeNoteItems (ly, nis) = let baseNote = emptyNote { _pitch = ly }
     in foldl f baseNote nis where
         f bn Tie2 = bn & isTied .~ True
         f bn (Articulation2 c) = if (isSimpleArt c)
@@ -482,7 +485,7 @@ getSimpleArt c = fromJust $ lookup c [
    ,('^', Marcato)
    ]
 
-placeAllNoteItems :: [InTime (Pitch,[NoteItem2])] -> Music
+placeAllNoteItems :: [InTime (Ly,[NoteItem2])] -> Music
 placeAllNoteItems = map (fmap placeNoteItems)
 
 allTransformations :: [(String,(PitchClass,Accidental))] -> Tree1 -> Music
