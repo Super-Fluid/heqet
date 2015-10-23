@@ -27,15 +27,18 @@ data Dur1 = NoDur
 
 data Pitch1 = NoteName1 String String
     | Frequency1 Double
+    | Perc1 String
     | Chord1 [Pitch1]
     deriving (Show)
 
 data Pitch3 = NoteName3 String String
+    | Perc3 String
     | Frequency3 Double
     deriving (Show)
 
 data Pitch5 = RegularNote PitchClass Octave Cents (Maybe Accidental)
     | Frequency5 PitchClass Octave Cents
+    | Perc5 String
     | Error5 String
     | Rest5
     deriving (Show)
@@ -147,7 +150,7 @@ leaf = do
     return $ Leaf p dur items
 
 pitch1 :: Parser Pitch1
-pitch1 = noteName <|> frequency <|> chord
+pitch1 = noteName <|> frequency <|> chord <|> percussionNote
 
 noteName :: Parser Pitch1
 noteName = do
@@ -177,6 +180,12 @@ chord = do
     whiteSpace
     char '>'
     return $ Chord1 ps
+
+percussionNote :: Parser Pitch1
+percussionNote = do
+    string "\\p"
+    perc <- many1 lower
+    return $ Perc1 perc
 
 duration :: Parser Dur1
 duration = rationalDur <|> commonDur <|> noDur
@@ -357,6 +366,7 @@ splitChords = f where
     f (Leaf (NoteName1 pc oct) d noteitems)  = (Leaf (NoteName3 pc oct) d noteitems)
     f (Leaf (Frequency1 hz) d noteitems)     = (Leaf (Frequency3 hz) d noteitems)
     f (Leaf (Chord1 ps) d noteitems) = Parallel [f $ Leaf p d noteitems | p <- ps]
+    f (Leaf (Perc1 s) d noteitems)  = (Leaf (Perc3 s) d noteitems)
 
 putCodeOnNotes :: Tree3 -> Tree4
 putCodeOnNotes = f where
@@ -405,6 +415,7 @@ lookupNoteName _ (Frequency3 freq) = let
         then (rewriteDownHalfstep (pc', oct'), cents + 100)
         else ((pc', oct'), cents)
     in Frequency5 pc'' oct'' cents''
+lookupNoteName _ (Perc3 s) = Perc5 s
 
 rewriteUpHalfstep :: (PitchClass,Octave) -> (PitchClass,Octave)
 rewriteUpHalfstep (pc, oct) = 
@@ -449,6 +460,7 @@ pitch5toPitch (LeafY p d nis) = LeafY (f p) d nis where
     f (RegularNote pc oct cents maybeAcc) = Pitch (MakePitch { _pc = pc, _oct = oct, _cents = cents })
     f (Frequency5 pc oct cents) = Pitch $ MakePitch { _pc = pc, _oct = oct, _cents = cents }
     f (Rest5) = Rest
+    f (Perc5 s) = Perc s
     f (Error5 s) = error "oops, errors aren't implemented yet"
 
 putInTime :: Tree6 -> [InTime (Ly,[NoteItem2])]
