@@ -460,7 +460,7 @@ refinePitches table (GraceY t1 t2) = GraceY (refinePitches table t1) (refinePitc
 refinePitches table (LeafY p3 d nis) = let
     p5 = lookupNoteName table p3
     (p5', nis') = addCents (p5, nis)
-    p5'' = fixCents p5
+    p5'' = fixCents p5'
     in LeafY p5'' d nis'
 
 pitch5toPitch :: Tree5 -> Tree6
@@ -499,7 +499,10 @@ placeNoteItems (ly, nis) = let baseNote = emptyNote { _pitch = ly }
         f bn (NoteCommand2 s) = bn & noteCommands %~ (s:)
         f bn (PreferredAcc a) = bn & acc .~ (Just a)
         f bn (LongCommand s t) = bn & exprCommands %~ ((ExprCommand {_begin = s, _end = t}):)
-        f bn (Cents2 _) = bn -- we have already dealt with the cents. (todo: refactor this line away)
+        f bn (Cents2 n) = let
+            withcents (Pitch p) = Pitch (p & cents .~ n)
+            withcents other = other
+            in bn & pitch %~ withcents
 
 isSimpleArt c = c `elem` ".->^+_!"
 getSimpleArt c = fromJust $ lookup c [
@@ -530,5 +533,19 @@ handleParseError :: Either ParseError Music -> Music
 handleParseError (Left pe) = [InTime { _val = (emptyNote { _errors = [show pe]}), _dur = 0, _t = 0}]
 handleParseError (Right mus) = mus
 
+music :: QuasiQuoter
+music = QuasiQuoter { quoteExp = \s -> [| handleParseError $ runParser musicParser () "" s >>= (Right . allTransformations en) |], quotePat = undefined, quoteType = undefined, quoteDec = undefined }
+
+someTransformations table tree = tree 
+    & fillInMissingDurs
+    & makeAllDurationsRational
+    & splitChords
+    & putCodeOnNotes
+--    & refinePitches table
+--    & pitch5toPitch
+--    & putInTime
+--    & placeAllNoteItems
+
+
 test :: QuasiQuoter
-test = QuasiQuoter { quoteExp = \s -> [| handleParseError $ runParser musicParser () "" s >>= (Right . allTransformations en) |], quotePat = undefined, quoteType = undefined, quoteDec = undefined }
+test = QuasiQuoter { quoteExp = \s -> [| runParser musicParser () "" s >>= (Right . someTransformations en) |], quotePat = undefined, quoteType = undefined, quoteDec = undefined }
