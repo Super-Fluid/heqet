@@ -544,6 +544,17 @@ someTransformations table tree = tree
 --    & putInTime
 --    & placeAllNoteItems
 
+-- sorry, this is a bit hackish. Easier than writing a whole perfect
+-- Pitch QQ and this will probably be just for debugging anyway
+extractFirstPitch :: Music -> Pitch
+extractFirstPitch [] = error "empty quoted pitch"
+extractFirstPitch mus = let
+    firstInTime = head mus
+    firstLy = firstInTime ^. val.pitch
+    p = case firstLy of 
+        Pitch pp -> pp
+        _ -> error "note in quoted pitch without pitch"
+    in p
 
 test :: QuasiQuoter
 test = QuasiQuoter { quoteExp = \s -> [| runParser musicParser () "" s >>= (Right . someTransformations en) |], quotePat = undefined, quoteType = undefined, quoteDec = undefined }
