@@ -407,8 +407,8 @@ lookupNoteName _ (NoteName3 "r" _) = Rest5
 lookupNoteName table (NoteName3 base oct) = case (lookup base table) of
         Nothing -> Error5 $ "unknown note name \""++base++"\"."
         Just (pc, acc) -> RegularNote pc (getOct oct) 0 (Just acc) where
-            getOct "" = 2
-            getOct s  = 2 + (length s) * (case (head s) of '\'' -> 1; ',' -> -1)
+            getOct "" = 0
+            getOct s  = (length s) * (case (head s) of '\'' -> 1; ',' -> -1)
 lookupNoteName _ (Frequency3 freq) = let
     halfSteps = logBase (2 ** (1/12)) (freq / 440)
     fractional = halfSteps - fromIntegral (truncate halfSteps) -- might be negative

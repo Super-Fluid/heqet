@@ -1,7 +1,9 @@
+{-# LANGUAGE TemplateHaskell, QuasiQuotes #-}
 module Render where
 
 import Types
 import qualified Tables
+import Templates
 
 import Control.Lens
 import Data.Maybe (fromJust,isJust)
@@ -59,3 +61,65 @@ renderOct oct
     | oct == 0 = ""
     | oct < 0 = replicate (- oct) ','
     | otherwise = replicate (oct) '\''
+
+data WrittenNote = WrittenNote { 
+      _preceeding :: [String]
+    , _body :: String
+    , _duration :: Duration
+    , _noteItems :: [String]
+    , _following :: [String]
+    }
+    deriving (Show)
+makeLenses ''WrittenNote
+
+type NoteInProgress = (Note Ly, WrittenNote)
+
+startRenderingNote :: InTime (Note Ly) -> NoteInProgress
+startRenderingNote it = (it^.val, WrittenNote [] "" (it^.dur) [] [])
+
+renderNoteBodyInStaff :: NoteInProgress -> NoteInProgress
+renderNoteBodyInStaff (n, w) = let
+    body' = case n^.pitch of 
+        Pitch p -> renderPitch' p (n^.acc)
+        Perc s -> xNote n
+        Rest -> "r"
+        Effect -> xNote n
+        Lyric s -> xNote n
+        Grace mus -> "\\grace {" ++ renderInStaff mus ++ "}"
+    nis' = case n^.pitch of
+        Pitch _ -> w^.noteItems 
+        Perc s -> (markupText s):(w^.noteItems)
+        Rest -> w^.noteItems
+        Effect -> w^.noteItems
+        Lyric s -> (markupText s):(w^.noteItems)
+        Grace mus -> w^.noteItems
+    in (n, w & noteItems .~ nis' & body .~ body')
+
+renderInStaff :: Music -> String
+renderInStaff mus = concat $ intersperse " " $ map f mus where
+    f note = note
+        & startRenderingNote
+        & renderNoteBodyInStaff
+        & extractRenderedNote
+
+extractRenderedNote :: NoteInProgress -> String
+extractRenderedNote (n,w) = 
+    (concat $ w^.preceeding)
+    ++ (w^.body)
+    ++ (renderDuration $ w^.duration)
+    ++ (concat $ w^.noteItems)
+    ++ (concat $ reverse $ w^.following)
+
+xNote :: Note Ly -> String
+xNote n = let 
+    fakePitch = case n^.clef of
+        Just Treble  -> "b'"
+        Just Alto    -> "c'"
+        Just Treble8 -> "b"
+        Just Tenor   -> "a"
+        Just Bass    -> "d"
+        _            -> "c'"
+    in "\\xNote "++fakePitch
+
+renderPitch' :: Pitch -> (Maybe Accidental) -> String
+renderPitch' p acc = renderPitchAcc (p^.pc) acc ++ renderOct (p^.oct)
