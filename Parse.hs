@@ -20,8 +20,7 @@ import Tables
 type PitchStr = String
 type DurStr = String
 
-data Dur1 = NoDur 
-    | RationalDur Duration
+data Dur1 =  RationalDur Duration
     | CommonDur String Int -- will need to be looked up later
     deriving (Show)
 
@@ -75,7 +74,8 @@ data TreeY p d ni = LeafY p d [ni]
     | GraceY (TreeY p d ni) (TreeY p d ni)
     deriving (Show)
 
-type Tree1 = TreeX Pitch1 Dur1
+type Tree1  = TreeX Pitch1 (Maybe Dur1)
+type Tree1a = TreeX Pitch1 Dur1
 type Tree2 = TreeX Pitch1 Duration
 type Tree3 = TreeX Pitch3 Duration
 type Tree4 = TreeY Pitch3 Duration NoteItem2
@@ -196,15 +196,15 @@ effect = do
     string "\\x"
     return Effect1
 
-duration :: Parser Dur1
+duration :: Parser (Maybe Dur1)
 duration = rationalDur <|> commonDur <|> noDur
 
-rationalDur :: Parser Dur1
+rationalDur :: Parser (Maybe Dur1)
 rationalDur = do
     string "\\d"
     whiteSpace
     r <- rational
-    return $ RationalDur r
+    return $ Just $ RationalDur r
 
 rational :: Parser Rational
 rational = do
@@ -229,14 +229,14 @@ nothingDenom :: Parser (Maybe Integer)
 nothingDenom = do
     return Nothing
 
-commonDur :: Parser Dur1
+commonDur :: Parser (Maybe Dur1)
 commonDur = do
     base <- many1 digit
     dots <- many $ char '.'
-    return $ CommonDur base (length dots)
+    return $ Just $ CommonDur base (length dots)
 
-noDur :: Parser Dur1
-noDur = return NoDur
+noDur :: Parser (Maybe Dur1)
+noDur = return Nothing
 
 noteItem :: Parser NoteItem1
 noteItem = (tie <|> try articulation <|> try with <|> try cents1 <|> try noteCommand) <* whiteSpace
@@ -339,7 +339,7 @@ lookupDur base = case (lookup base commonDurs) of
     Just d -> d
     Nothing -> error $ "unknown duration \""++base++"\". If you want an arbitrary rational duration, you need to prefix it with \"\\d\"."
 
-makeAllDurationsRational :: Tree1 -> Tree2
+makeAllDurationsRational :: Tree1a -> Tree2
 makeAllDurationsRational = f where
     f (Function s mus)      = Function s (f mus)
     f (Command s t mus)     = Command s t (f mus)
@@ -348,7 +348,7 @@ makeAllDurationsRational = f where
     f (Grace mus1 mus2)     = Grace (f mus1) (f mus2)
     f (Sequential muss)     = Sequential (map f muss)
 
-fillInMissingDurs :: Tree1 -> Tree1
+fillInMissingDurs :: Tree1 -> Tree1a
 fillInMissingDurs t = fst $ f (CommonDur "4" 0) t where
     f d (Function s mus) = (Function s (fst $ f d mus), snd $ f d mus)
     f d (Command s t mus) = (Command s t (fst $ f d mus), snd $ f d mus)
@@ -357,13 +357,12 @@ fillInMissingDurs t = fst $ f (CommonDur "4" 0) t where
     f d (Grace mus1 mus2) = (Grace (fst $ f (CommonDur "8" 0) mus1) (fst $ f d mus2), snd $ f d mus2)
     f d (Sequential muss) = (Sequential (fst results), snd results) where
         results = foldr (\mus (accum,lastdur) -> ((fst $ f lastdur mus):accum,(snd $ f lastdur mus))) ([],d) muss
-    f d (Leaf p NoDur nis) = (Leaf p d nis, d)
-    f _ (Leaf p dur nis) = (Leaf p dur nis, dur)
+    f d (Leaf p Nothing nis) = (Leaf p d nis, d)
+    f _ (Leaf p (Just dur) nis) = (Leaf p dur nis, dur)
 
 makeDurationRational :: Dur1 -> Duration
 makeDurationRational (RationalDur r) = r
 makeDurationRational (CommonDur base dots) = addDots (lookupDur base) dots
-makeDurationRational NoDur = error "can't happen: note without dur after applying durs"
 
 splitChords :: Tree2 -> Tree3
 splitChords = f where
