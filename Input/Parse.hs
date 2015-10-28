@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell, QuasiQuotes #-}
-module Parse where
+module Input.Parse where
 
 import Text.ParserCombinators.Parsec
 import Text.ParserCombinators.Parsec.Language
@@ -529,9 +529,6 @@ allTransformations table tree = tree
 handleParseError :: Either ParseError Music -> Music
 handleParseError (Left pe) = [InTime { _val = (emptyNote { _errors = [show pe]}), _dur = 0, _t = 0}]
 handleParseError (Right mus) = mus
-
-music :: QuasiQuoter
-music = QuasiQuoter { quoteExp = \s -> [| handleParseError $ runParser musicParser () "" s >>= (Right . allTransformations en) |], quotePat = undefined, quoteType = undefined, quoteDec = undefined }
 
 someTransformations table tree = tree 
     & fillInMissingDurs

@@ -2,15 +2,15 @@ module Tables where
 
 import Types
 
-type Repr = [(String,(PitchClass,Accidental))]
+type LanguageData = [(String,(PitchClass,Accidental))]
 
-languages :: [(String,Repr)]
+languages :: [(String,LanguageData)]
 languages = [
     ("en",en)
    ,("nl",nl)
     ]
 
-en :: Repr
+en :: LanguageData
 en = [
     ("a",(A,Natural))
    ,("b",(B,Natural))
@@ -84,7 +84,7 @@ en = [
    ,("gsharpsharp",(A,DoubleSharp))
    ]
 
-nl :: Repr
+nl :: LanguageData
 nl = [
     ("a",(A,Natural))
    ,("b",(B,Natural))

@@ -2,7 +2,7 @@
 
 module Heqet where
 
-import Parse
+import Input.English
 import Types
 import Tables
 import Render
