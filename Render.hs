@@ -95,11 +95,35 @@ renderNoteBodyInStaff (n, w) = let
         Grace mus -> w^.noteItems
     in (n, w & noteItems .~ nis' & body .~ body')
 
+renderNoteItems :: NoteInProgress -> NoteInProgress
+renderNoteItems (n,w) = let
+    beginExpr = map (^.begin) (n^.exprCommands)
+    endExpr = map (^.end) (n^.exprCommands)
+    beginNDExpr = map (^.begin) (n^.nonDistCommands)
+    endNDExpr = map (^.end) (n^.nonDistCommands)
+    markedErrors = map markupText $ n^.errors
+    articulations = map renderArt $ n^.artics
+    w' = w
+        & preceeding .~ beginExpr ++ beginNDExpr
+        & following .~ endExpr ++ endNDExpr
+        & noteItems .~ (map ('\\':) $ n^.noteCommands) ++ articulations ++ markedErrors
+    in (n,w')
+
+renderArt :: SimpleArticulation -> String
+renderArt Staccato = "-."
+renderArt Marcato = "-^"
+renderArt Tenuto = "--"
+renderArt Portato = "-_"
+renderArt Staccatissimo = "-!"
+renderArt Stopped = "-+"
+renderArt Accent = "->"
+
 renderInStaff :: Music -> String
 renderInStaff mus = concat $ intersperse " " $ map f mus where
     f note = note
         & startRenderingNote
         & renderNoteBodyInStaff
+        & renderNoteItems
         & extractRenderedNote
 
 extractRenderedNote :: NoteInProgress -> String
