@@ -65,13 +65,13 @@ data TreeX p d = Function String (TreeX p d)
     | Leaf p d [NoteItem1]
     | Parallel [TreeX p d]
     | Sequential [TreeX p d]
-    | Grace (TreeX p d) (TreeX p d)
+    | GraceX (TreeX p d)
     deriving (Show)
 
 data TreeY p d ni = LeafY p d [ni]
     | ParallelY [TreeY p d ni]
     | SequentialY [TreeY p d ni]
-    | GraceY (TreeY p d ni) (TreeY p d ni)
+    | GraceY (TreeY p d ni)
     deriving (Show)
 
 type Tree1  = TreeX Pitch1 (Maybe Dur1)
@@ -310,9 +310,7 @@ grace = do
     whiteSpace
     g <- braces $ tree
     whiteSpace
-    n <- braces $ tree
-    whiteSpace
-    return $ Grace g n
+    return $ GraceX g
 
 --- TRANSFORMATIONS
 
@@ -345,7 +343,7 @@ makeAllDurationsRational = f where
     f (Command s t mus)     = Command s t (f mus)
     f (Leaf p d noteitems)  = Leaf p (makeDurationRational d) noteitems
     f (Parallel muss)       = Parallel (map f muss)
-    f (Grace mus1 mus2)     = Grace (f mus1) (f mus2)
+    f (GraceX mus )     = GraceX (f mus)
     f (Sequential muss)     = Sequential (map f muss)
 
 fillInMissingDurs :: Tree1 -> Tree1a
@@ -354,7 +352,7 @@ fillInMissingDurs t = fst $ f (CommonDur "4" 0) t where
     f d (Command s t mus) = (Command s t (fst $ f d mus), snd $ f d mus)
     f d (Parallel muss) = (Parallel (fst results), snd results) where
         results = foldr (\mus (accum,_) -> ((fst $ f d mus):accum,(snd $ f d mus))) ([],d) muss
-    f d (Grace mus1 mus2) = (Grace (fst $ f (CommonDur "8" 0) mus1) (fst $ f d mus2), snd $ f d mus2)
+    f d (GraceX mus) = (GraceX (fst $ f (CommonDur "8" 0) mus), d)
     f d (Sequential muss) = (Sequential (fst results), snd results) where
         results = foldr (\mus (accum,lastdur) -> ((fst $ f lastdur mus):accum,(snd $ f lastdur mus))) ([],d) muss
     f d (Leaf p Nothing nis) = (Leaf p d nis, d)
@@ -369,7 +367,7 @@ splitChords = f where
     f (Function s mus)      = Function s (f mus)
     f (Command s t mus)     = Command s t (f mus)
     f (Parallel muss)       = Parallel (map f muss)
-    f (Grace mus1 mus2)     = Grace (f mus1) (f mus2)
+    f (GraceX mus)          = GraceX (f mus)
     f (Sequential muss)     = Sequential (map f muss)
     f (Leaf (NoteName1 pc oct) d noteitems)  = (Leaf (NoteName3 pc oct) d noteitems)
     f (Leaf (Frequency1 hz) d noteitems)     = (Leaf (Frequency3 hz) d noteitems)
@@ -382,7 +380,7 @@ putCodeOnNotes = f where
     f (Function s mus)      = addAnnotationToEveryNote (LongCommand (s++" { ") " } ") (f mus)
     f (Command s t mus)     = addAnnotationToEveryNote (LongCommand s t) (f mus)
     f (Parallel muss)       = ParallelY (map f muss)
-    f (Grace mus1 mus2)     = GraceY (f mus1) (f mus2)
+    f (GraceX mus)          = GraceY (f mus)
     f (Sequential muss)     = SequentialY (map f muss)
     f (Leaf p d ni)         = LeafY p d (map noteItem1to2 ni)
 
@@ -392,7 +390,7 @@ addAnnotationToEveryNote = f where
     f ann (ParallelY muss)       = ParallelY (map (f ann) muss)
     f ann (SequentialY muss)     = SequentialY (map (f ann) muss)
     f ann (LeafY p d noteitems)  = LeafY p d (ann:noteitems)
-    f ann (GraceY mus1 mus2)     = GraceY (f ann mus1) (f ann mus2)
+    f ann (GraceY mus)     = GraceY (f ann mus)
 
 noteItem1to2 :: NoteItem1 -> NoteItem2
 noteItem1to2 = f where
@@ -455,7 +453,7 @@ fixCents p = p
 refinePitches :: [(String,(PitchClass,Accidental))] -> Tree4 -> Tree5
 refinePitches table (ParallelY ts) = ParallelY (map (refinePitches table) ts)
 refinePitches table (SequentialY ts) = SequentialY (map (refinePitches table) ts)
-refinePitches table (GraceY t1 t2) = GraceY (refinePitches table t1) (refinePitches table t2)
+refinePitches table (GraceY t) = GraceY (refinePitches table t)
 refinePitches table (LeafY p3 d nis) = let
     p5 = lookupNoteName table p3
     (p5', nis') = addCents (p5, nis)
@@ -465,7 +463,7 @@ refinePitches table (LeafY p3 d nis) = let
 pitch5toPitch :: Tree5 -> Tree6
 pitch5toPitch (ParallelY muss) = ParallelY (map pitch5toPitch muss)
 pitch5toPitch (SequentialY muss) = SequentialY (map pitch5toPitch muss)
-pitch5toPitch (GraceY mus1 mus2) = GraceY (pitch5toPitch mus1) (pitch5toPitch mus2)
+pitch5toPitch (GraceY mus) = GraceY (pitch5toPitch mus)
 pitch5toPitch (LeafY p d nis) = LeafY (f p) d (addAcc nis p) where
     f (RegularNote pc oct cents maybeAcc) = Pitch (MakePitch { _pc = pc, _oct = oct, _cents = cents })
     f (Frequency5 pc oct cents) = Pitch $ MakePitch { _pc = pc, _oct = oct, _cents = cents }
@@ -477,13 +475,13 @@ pitch5toPitch (LeafY p d nis) = LeafY (f p) d (addAcc nis p) where
     addAcc nis _ = nis
 
 putInTime :: Tree6 -> [InTime (Ly,[NoteItem2])]
-putInTime (GraceY mus1 mus2) = putInTime mus2 -- !!!!
+putInTime (GraceY mus) = [InTime { _val = (Grace (placeAllNoteItems $ putInTime mus),[]), _dur = 0, _t = 0 }]
 putInTime (LeafY ly d nis) = [InTime { _val = (ly,nis), _dur = d, _t = 0 }]
 putInTime (ParallelY muss) = sortBy (\n1 n2 -> (n1^.t) `compare` (n2^.t)) $ concat $ map putInTime muss
 putInTime (SequentialY muss) = fst $ foldl (\(accum, time) mus -> (accum++(shiftLate time $ putInTime mus),time + (durMu mus))) ([],0) muss where
     shiftLate time itmus = map (\it -> it & t %~ (+time)) itmus
     durMu :: Tree6 -> Duration
-    durMu (GraceY _ mus2) = durMu mus2
+    durMu (GraceY _) = 0
     durMu (ParallelY muss) = maximum (map durMu muss)
     durMu (SequentialY muss) = sum (map durMu muss)
     durMu (LeafY _ d _) = d 

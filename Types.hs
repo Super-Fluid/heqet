@@ -109,8 +109,8 @@ emptyNote = Note {
     , _key = Nothing
     }
 
-data Ly = Pitch Pitch | Rest | Perc Perc | Effect | Lyric Lyric
-    deriving (Eq,Show,Read)
+data Ly = Pitch Pitch | Rest | Perc Perc | Effect | Lyric Lyric | Grace Music
+    deriving (Eq,Show)
 
 type MusicOf a = [(InTime (Note a))] -- Invariant: must be sorted chronologically
 type Music = MusicOf Ly
