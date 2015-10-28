@@ -449,7 +449,7 @@ addCents (p, nis) = (p, nis)
 fixCents :: Pitch5 -> Pitch5
 fixCents (RegularNote pc oct cents maybeAcc) = 
     if cents > 50 || cents < -50
-    then lookupNoteName [] (Frequency3 (((2 ** (1/12)) ** ((fromIntegral $ fromEnum pc) + ((fromIntegral oct - 4) * 12))) * 440))
+    then lookupNoteName [] (Frequency3 (((2 ** (1/12)) ** ((fromIntegral $ ((fromEnum pc + 3) `mod` 12)) + ((fromIntegral oct - 4) * 12) + (cents/100))) * 440))
     else RegularNote pc oct cents maybeAcc
 fixCents p = p
 
