@@ -58,6 +58,7 @@ data NoteItem2 = Tie2
     | LongCommand String String
     | Cents2 Double
     | PreferredAcc Accidental
+    | Error2 String
     deriving (Show)
 
 data TreeX p d = Function String (TreeX p d)
@@ -464,13 +465,15 @@ pitch5toPitch :: Tree5 -> Tree6
 pitch5toPitch (ParallelY muss) = ParallelY (map pitch5toPitch muss)
 pitch5toPitch (SequentialY muss) = SequentialY (map pitch5toPitch muss)
 pitch5toPitch (GraceY mus) = GraceY (pitch5toPitch mus)
-pitch5toPitch (LeafY p d nis) = LeafY (f p) d (addAcc nis p) where
+pitch5toPitch (LeafY p d nis) = LeafY (f p) d (addAcc nis p ++ (errNi p)) where
     f (RegularNote pc oct cents maybeAcc) = Pitch (MakePitch { _pc = pc, _oct = oct, _cents = cents })
     f (Frequency5 pc oct cents) = Pitch $ MakePitch { _pc = pc, _oct = oct, _cents = cents }
     f (Rest5) = Rest
     f (Perc5 s) = Perc s
     f Effect5 = Effect
-    f (Error5 s) = error "oops, errors aren't implemented yet"
+    f (Error5 s) = Effect
+    errNi (Error5 s) = [Error2 s]
+    errNi _ = []
     addAcc nis (RegularNote _ _ _ (Just acc)) = (PreferredAcc acc):nis
     addAcc nis _ = nis
 
@@ -495,6 +498,7 @@ placeNoteItems (ly, nis) = let baseNote = emptyNote { _pitch = ly }
                                  else bn & noteCommands %~ (("-" ++ [c]):)
         f bn (NoteCommand2 s) = bn & noteCommands %~ (s:)
         f bn (PreferredAcc a) = bn & acc .~ (Just a)
+        f bn (Error2 s)       = bn & errors %~ (s:)
         f bn (LongCommand s t) = bn & exprCommands %~ ((ExprCommand {_begin = s, _end = t}):)
         f bn (Cents2 n) = let
             withcents (Pitch p) = Pitch (p & cents .~ n)
