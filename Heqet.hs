@@ -7,5 +7,7 @@ import Types
 import Tables
 import Render
 import Tools
+import TestCases
+import Instruments
 
 import Control.Lens
