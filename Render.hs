@@ -4,6 +4,7 @@ module Render where
 import Types
 import qualified Tables
 import Templates
+import Tools
 
 import Control.Lens
 import Data.Maybe (fromJust,isJust)
