@@ -5,6 +5,7 @@ import Types
 import qualified Tables
 import Templates
 import Tools
+import RenderTypes
 
 import Control.Lens
 import Data.Maybe (fromJust,isJust)
