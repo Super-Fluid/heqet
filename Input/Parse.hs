@@ -248,7 +248,7 @@ tie = char '~' >> return Tie
 articulation :: Parser NoteItem1
 articulation = do
     char '-'
-    c <- oneOf "<>\\'+-!._,~/0123456789"
+    c <- oneOf "<>\\'+-!._,~/0123456789("
     return $ Articulation c
 
 
@@ -495,7 +495,9 @@ placeNoteItems (ly, nis) = let baseNote = emptyNote { _pitch = ly }
         f bn Tie2 = bn & isTied .~ True
         f bn (Articulation2 c) = if (isSimpleArt c)
                                  then bn & artics %~ ((getSimpleArt c):)
-                                 else bn & noteCommands %~ (("-" ++ [c]):)
+                                 else if (c == '(')
+                                    then bn & isSlurred .~ True
+                                    else bn & noteCommands %~ (("-" ++ [c]):)
         f bn (NoteCommand2 s) = bn & noteCommands %~ (s:)
         f bn (PreferredAcc a) = bn & acc .~ (Just a)
         f bn (Error2 s)       = bn & errors %~ (s:)
