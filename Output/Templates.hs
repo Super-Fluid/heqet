@@ -1,4 +1,4 @@
-module Templates where
+module Output.Templates where
 
 -- operating on music:
 

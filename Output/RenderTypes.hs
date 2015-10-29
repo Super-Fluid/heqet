@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell, QuasiQuotes #-}
-module RenderTypes where
+module Output.RenderTypes where
 
 import Types
 

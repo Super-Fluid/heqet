@@ -1,11 +1,11 @@
 {-# LANGUAGE TemplateHaskell, QuasiQuotes #-}
-module Render where
+module Output.Render where
 
 import Types
 import qualified Tables
-import Templates
+import Output.Templates
 import Tools
-import RenderTypes
+import Output.RenderTypes
 
 import Control.Lens
 import Data.Maybe (fromJust,isJust)

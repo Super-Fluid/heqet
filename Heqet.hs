@@ -5,7 +5,7 @@ module Heqet where
 import Input.English
 import Types
 import Tables
-import Render
+import Output.Render
 import Tools
 import TestCases
 import Instruments
