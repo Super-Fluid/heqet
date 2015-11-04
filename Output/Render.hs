@@ -164,5 +164,5 @@ formChord its = (head its) & val .~ ChordR (its & map (^.val) & map (\(UniNote n
 combineChords :: Linear -> Linear
 combineChords mus = mus 
     & makeBucketsBy isChordable
+    & sortBy (\a b -> ((head a)^.t) `compare` ((head b)^.t))
     & map formChord
---    & sortBy (\a b -> (head a)^.t `compare` (head b)^.t)
