@@ -15,3 +15,5 @@ linear2 = linear1 & mapOverNotes (\x -> x
     & tags .~ [("voice","1")]
     & inst .~ Just Instruments.melody
     )
+
+chordal1 = [music| <c e>4. <b d fs>8-! |]
