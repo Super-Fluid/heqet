@@ -9,9 +9,9 @@ import Output.RenderTypes
 import List
 
 import Control.Lens
-import Data.Maybe (fromJust,isJust)
+import Data.Maybe (fromJust,isJust,catMaybes)
 import Data.Tuple (swap)
-import Data.List (concat, intersperse, sortBy)
+import Data.List (concat, intersperse, sortBy, sort, group)
 
 testRender :: Music -> String
 testRender mu = "\\version \"2.16.2\"\n\\language \"english\"\n\\score {\n\\new Staff \\with {\nmidiInstrument = \"bassoon\"\n} { \n\\once \\override Staff.TimeSignature #'stencil = ##f \n\\clef bass\n\\cadenzaOn " ++ (listRender mu) ++ "\n\\cadenzaOff\n \\bar \"|\"\n}\\layout { }\n\\midi { }\n}"
@@ -151,8 +151,15 @@ xNote n = let
 renderPitch' :: Pitch -> (Maybe Accidental) -> String
 renderPitch' p acc = renderPitchAcc (p^.pc) acc ++ renderOct (p^.oct)
 
-toStage0 :: Music -> Linear
-toStage0 = map (\it -> it & val .~ (UniNote $ it^.val))
+toStage0 :: Music -> [Linear]
+toStage0 mus = map phraseToLinear musicInLines where
+    musicInLines = (allVoices mus) & map (\v -> mus^.voice v)
+
+allVoices :: Music -> [String]
+allVoices = catMaybes.(map head).group.sort.(map (\it -> lookup "voice" (it^.val.tags)))
+
+phraseToLinear :: Music -> Linear
+phraseToLinear = map (\it -> it & val .~ (UniNote $ it^.val))
 
 isChordable :: InTime a -> InTime a -> Bool
 isChordable it1 it2 = (it1^.dur == it2^.dur) && (it1^.t == it2^.t)
@@ -166,3 +173,8 @@ combineChords mus = mus
     & makeBucketsBy isChordable
     & sortBy (\a b -> ((head a)^.t) `compare` ((head b)^.t))
     & map formChord
+
+allRendering :: Music -> [Linear]
+allRendering mus = mus
+    & toStage0
+    & map combineChords

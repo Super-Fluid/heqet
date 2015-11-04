@@ -17,3 +17,8 @@ linear2 = linear1 & mapOverNotes (\x -> x
     )
 
 chordal1 = [music| <c e>4. <b d fs>8-! |]
+chordal1' = chordal1 & mapOverNotes (\x -> x
+    & clef .~ Just Treble
+    & tags .~ [("voice","1")]
+    & inst .~ Just Instruments.melody
+    )
