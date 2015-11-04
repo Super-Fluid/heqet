@@ -149,3 +149,7 @@ xNote n = let
 
 renderPitch' :: Pitch -> (Maybe Accidental) -> String
 renderPitch' p acc = renderPitchAcc (p^.pc) acc ++ renderOct (p^.oct)
+
+toProcessType :: Music -> Stage1
+toProcessType mus = [[[map UniNote mus]]]
+
