@@ -13,3 +13,7 @@ makeBucketsBy comp xs = foldr f [] xs where
     f x (y:ys) = if x `comp` (head y) -- y can never be []
                then (x:y):ys
                else y:(f x ys)
+
+-- note: does NOT preserve order!
+filteringBy :: (a -> Bool) -> Lens' [a] [a]
+filteringBy p = lens (filter p) (\s a -> s++a)
