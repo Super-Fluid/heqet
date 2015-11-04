@@ -7,11 +7,13 @@ import Output.Templates
 import Tools
 import Output.RenderTypes
 import List
+import qualified Output.LilypondSettings
 
 import Control.Lens
 import Data.Maybe (fromJust,isJust,catMaybes)
 import Data.Tuple (swap)
-import Data.List (concat, intersperse, sortBy, sort, group)
+import Data.List (concat, intersperse, sortBy, sort, group, find)
+import Control.Applicative ((<$>))
 
 testRender :: Music -> String
 testRender mu = "\\version \"2.16.2\"\n\\language \"english\"\n\\score {\n\\new Staff \\with {\nmidiInstrument = \"bassoon\"\n} { \n\\once \\override Staff.TimeSignature #'stencil = ##f \n\\clef bass\n\\cadenzaOn " ++ (listRender mu) ++ "\n\\cadenzaOff\n \\bar \"|\"\n}\\layout { }\n\\midi { }\n}"
@@ -174,7 +176,28 @@ combineChords mus = mus
     & sortBy (\a b -> ((head a)^.t) `compare` ((head b)^.t))
     & map formChord
 
-allRendering :: Music -> [Linear]
+findPolys :: Linear -> Staff
+findPolys lin = reverse $ foldl f [] (timeSort lin) where
+    f [] it = [ emptyCol & atIndex 1 .~ [it] ]
+    f (current:past) it = let (voiceN,succeeded) = tryToFit it current
+        in if not succeeded
+           then (emptyCol & atIndex 1 .~ [it]):current:past
+           else if voiceN == 1
+                then if all (checkLineFit it) current
+                     then (emptyCol & atIndex 1 .~ [it]):current:past
+                     else (current & atIndex 1 %~ (it:)):past
+                else (current & atIndex voiceN %~ (it:)):past
+    emptyCol = replicate Output.LilypondSettings.maxNumberOfVoices []
+    tryToFit :: (InTime LinearNote) -> Polyphony -> (Int,Bool)
+    tryToFit it col = tryToFitHelper $ checkFit it col
+    tryToFitHelper Nothing = (undefined,False)
+    tryToFitHelper (Just i) = (i,True)
+    checkFit it col = snd <$> find (checkLineFit it . fst) (zipWith (,) col [0..])
+    checkLineFit it line = all (not . conflictsWith it) line
+    conflictsWith it1 it2 = it1^.t >= ((it2^.t) + (it2^.dur)) || it2^.t >= ((it1^.t) + (it1^.dur))
+
+allRendering :: Music -> Stage1
 allRendering mus = mus
     & toStage0
     & map combineChords
+    & map findPolys

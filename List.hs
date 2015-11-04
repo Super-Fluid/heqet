@@ -17,3 +17,6 @@ makeBucketsBy comp xs = foldr f [] xs where
 -- note: does NOT preserve order!
 filteringBy :: (a -> Bool) -> Lens' [a] [a]
 filteringBy p = lens (filter p) (\s a -> s++a)
+
+atIndex :: Int -> Lens' [a] a
+atIndex i = lens (!! i) (\s a -> (take i s) ++ [a] ++ (drop (i+1) s))
