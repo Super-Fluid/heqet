@@ -6,11 +6,12 @@ import qualified Tables
 import Output.Templates
 import Tools
 import Output.RenderTypes
+import List
 
 import Control.Lens
 import Data.Maybe (fromJust,isJust)
 import Data.Tuple (swap)
-import Data.List (concat, intersperse)
+import Data.List (concat, intersperse, sortBy)
 
 testRender :: Music -> String
 testRender mu = "\\version \"2.16.2\"\n\\language \"english\"\n\\score {\n\\new Staff \\with {\nmidiInstrument = \"bassoon\"\n} { \n\\once \\override Staff.TimeSignature #'stencil = ##f \n\\clef bass\n\\cadenzaOn " ++ (listRender mu) ++ "\n\\cadenzaOff\n \\bar \"|\"\n}\\layout { }\n\\midi { }\n}"
@@ -150,6 +151,18 @@ xNote n = let
 renderPitch' :: Pitch -> (Maybe Accidental) -> String
 renderPitch' p acc = renderPitchAcc (p^.pc) acc ++ renderOct (p^.oct)
 
-toProcessType :: Music -> Stage1
-toProcessType mus = [[[map UniNote mus]]]
+toStage0 :: Music -> Linear
+toStage0 = map (\it -> it & val .~ (UniNote $ it^.val))
 
+isChordable :: InTime a -> InTime a -> Bool
+isChordable it1 it2 = (it1^.dur == it2^.dur) && (it1^.t == it2^.t)
+
+formChord :: [InTime LinearNote] -> InTime LinearNote
+formChord [it] = it
+formChord its = (head its) & val .~ ChordR (its & map (^.val) & map (\(UniNote n) -> n))
+
+combineChords :: Linear -> Linear
+combineChords mus = mus 
+    & makeBucketsBy isChordable
+    & map formChord
+--    & sortBy (\a b -> (head a)^.t `compare` (head b)^.t)

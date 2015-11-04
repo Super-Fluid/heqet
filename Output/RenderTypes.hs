@@ -4,9 +4,9 @@ module Output.RenderTypes where
 import Types
 
 type ChordR = [Note Ly]
-data LinearNote = ChordR ChordR | UniNote (InTime (Note Ly)) | Function ExprCommand LinearNote
+data LinearNote = ChordR ChordR | UniNote (Note Ly) | Function ExprCommand Linear
     deriving (Show)
-type Linear = [LinearNote]
+type Linear = [InTime LinearNote]
 type Polyphony = [Linear]
 type Staff = [Polyphony]
 type Stage1 = [Staff]
