@@ -13,7 +13,9 @@ import Control.Lens
 import Data.Maybe (fromJust,isJust,catMaybes)
 import Data.Tuple (swap)
 import Data.List (concat, intersperse, sortBy, sort, group, find)
-import Control.Applicative ((<$>))
+import Control.Applicative ((<$>),(<|>))
+import Data.Monoid ((<>))
+import Safe (readMay)
 
 testRender :: Music -> String
 testRender mu = "\\version \"2.16.2\"\n\\language \"english\"\n\\score {\n\\new Staff \\with {\nmidiInstrument = \"bassoon\"\n} { \n\\once \\override Staff.TimeSignature #'stencil = ##f \n\\clef bass\n\\cadenzaOn " ++ (listRender mu) ++ "\n\\cadenzaOff\n \\bar \"|\"\n}\\layout { }\n\\midi { }\n}"
@@ -176,8 +178,28 @@ combineChords mus = mus
     & sortBy (\a b -> ((head a)^.t) `compare` ((head b)^.t))
     & map formChord
 
+pitchLN :: LinearNote -> Double
+pitchLN (UniNote n) = pitch2num n
+pitchLN (ChordR ns) = (sum $ map pitch2num ns) / (fromIntegral $ length ns)
+
+pitch2num :: Note Ly -> Double
+pitch2num n = let x = ly2num (n^.pitch)
+    in  if isJust x
+        then fromJust x
+        else fromJust $ (lookup "verse" (n^.tags) >>= readMay >>= return.(0-)) <|> Just 0
+
+ly2num :: Ly -> Maybe Double
+ly2num (Pitch p) = Just (((2 ** (1/12)) ** ((fromIntegral $ ((fromEnum (p^.pc) + 3) `mod` 12)) + ((fromIntegral (p^.oct) - 4) * 12) + ((p^.cents)/100))) * 440)
+ly2num Rest = Just 0
+ly2num (Perc _) = Just 0 -- expand on this according to common drum notation?
+ly2num (Lyric _) = Nothing
+ly2num (Grace _) = Just 0 
+
+timePitchSort :: Linear -> Linear
+timePitchSort = sortBy $ \it1 it2 -> (it1^.t) `compare` (it2^.t) <> (pitchLN $ it1^.val) `compare` (pitchLN $ it2^.val)
+
 findPolys :: Linear -> Staff
-findPolys lin = reverse $ foldl f [] (timeSort lin) where
+findPolys lin = reverse $ foldl f [] (timePitchSort lin) where
     f [] it = [ emptyCol & atIndex 1 .~ [it] ]
     f (current:past) it = let (voiceN,succeeded) = tryToFit it current
         in if not succeeded
@@ -200,4 +222,5 @@ allRendering :: Music -> Stage1
 allRendering mus = mus
     & toStage0
     & map combineChords
+    & map timePitchSort
     & map findPolys
