@@ -22,3 +22,10 @@ chordal1' = chordal1 & mapOverNotes (\x -> x
     & line .~ Just "1"
     & inst .~ Just Instruments.melody
     )
+
+poly1 = [music| f1 << { c4 g, } \\ { e2 } >> <g, b>2 c1\fermata |] 
+    & mapOverNotes (\x -> x
+        & clef .~ Just Treble
+        & line .~ Just "1"
+        & inst .~ Just Instruments.melody
+        )

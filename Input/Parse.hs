@@ -300,6 +300,7 @@ voices1 = do
     vs <- (braces (try tree)) `sepBy` voicesSep
     whiteSpace
     string ">>"
+    whiteSpace
     return $ Parallel vs
 
 voicesSep :: Parser ()
