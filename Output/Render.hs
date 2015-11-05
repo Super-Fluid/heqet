@@ -157,10 +157,10 @@ renderPitch' p acc = renderPitchAcc (p^.pc) acc ++ renderOct (p^.oct)
 
 toStage0 :: Music -> [Linear]
 toStage0 mus = map phraseToLinear musicInLines where
-    musicInLines = (allVoices mus) & map (\v -> mus^.voice v)
+    musicInLines = (allVoices mus) & map (\v -> mus^.ofLine v)
 
 allVoices :: Music -> [String]
-allVoices = catMaybes.(map head).group.sort.(map (\it -> lookup "voice" (it^.val.tags)))
+allVoices = catMaybes.(map head).group.sort.(map (^.val.line))
 
 phraseToLinear :: Music -> Linear
 phraseToLinear = map (\it -> it & val .~ (UniNote $ it^.val))

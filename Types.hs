@@ -83,6 +83,7 @@ data Note a = Note {
     , _dynamic :: Maybe Dynamic
     , _artics :: [SimpleArticulation] -- all other articulations are noteCommands
     , _tags :: [(String,String)]
+    , _line :: Maybe String
     , _clef :: Maybe Clef
     , _inst :: Maybe Instrument
     , _chord :: Maybe Chord
@@ -103,6 +104,7 @@ emptyNote = Note {
     , _dynamic = Nothing
     , _artics = []
     , _tags = []
+    , _line = Nothing
     , _clef = Nothing
     , _inst = Nothing
     , _chord = Nothing

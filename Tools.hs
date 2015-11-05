@@ -22,8 +22,8 @@ startMusicAt pt mus = fst $ foldl f ([],pt) mus where
 startMusicAtZero :: MusicOf a -> MusicOf a
 startMusicAtZero = startMusicAt 0
 
-voice :: String -> Lens' Music Music
-voice v = filteringBy (\it -> lookup "voice" (it^.val.tags) == Just v)
+ofLine :: String -> Lens' Music Music
+ofLine v = filteringBy (\it -> it^.val.line == Just v)
 
 instName :: String -> Lens' Music Music
 instName v = filteringBy (\it -> ((^.name) <$> it^.val.inst) == Just v)
