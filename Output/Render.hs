@@ -216,7 +216,8 @@ findPolys lin = reverse $ foldl f [] (timePitchSort lin) where
     tryToFitHelper (Just i) = (i,True)
     checkFit it col = snd <$> find (checkLineFit it . fst) (zipWith (,) col [0..])
     checkLineFit it line = all (not . conflictsWith it) line
-    conflictsWith it1 it2 = it1^.t >= ((it2^.t) + (it2^.dur)) || it2^.t >= ((it1^.t) + (it1^.dur))
+    conflictsWith it1 it2 = it1^.t < (it2^.t + it2^.dur) && it2^.t > (it1^.t + it1^.dur)
+
 
 allRendering :: Music -> Stage1
 allRendering mus = mus
@@ -224,3 +225,6 @@ allRendering mus = mus
     & map combineChords
     & map timePitchSort
     & map findPolys
+    & (map.map.map) reverse -- put each Linear in order
+    & map reverse -- put the Polyphonys in time order
+    & (map.map) (filter (not.null)) -- remove empty Linears from each Polyphony
