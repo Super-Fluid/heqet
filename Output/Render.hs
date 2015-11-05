@@ -182,19 +182,6 @@ pitchLN :: LinearNote -> Double
 pitchLN (UniNote n) = pitch2num n
 pitchLN (ChordR ns) = (sum $ map pitch2num ns) / (fromIntegral $ length ns)
 
-pitch2num :: Note Ly -> Double
-pitch2num n = let x = ly2num (n^.pitch)
-    in  if isJust x
-        then fromJust x
-        else fromJust $ (lookup "verse" (n^.tags) >>= readMay >>= return.(0-)) <|> Just 0
-
-ly2num :: Ly -> Maybe Double
-ly2num (Pitch p) = Just (((2 ** (1/12)) ** ((fromIntegral $ ((fromEnum (p^.pc) + 3) `mod` 12)) + ((fromIntegral (p^.oct) - 4) * 12) + ((p^.cents)/100))) * 440)
-ly2num Rest = Just 0
-ly2num (Perc _) = Just 0 -- expand on this according to common drum notation?
-ly2num (Lyric _) = Nothing
-ly2num (Grace _) = Just 0 
-
 timePitchSort :: Linear -> Linear
 timePitchSort = sortBy $ \it1 it2 -> (it1^.t) `compare` (it2^.t) <> (pitchLN $ it1^.val) `compare` (pitchLN $ it2^.val)
 
