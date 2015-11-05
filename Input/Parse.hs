@@ -93,6 +93,10 @@ languageDef =
              }
 
 lexer = Token.makeTokenParser languageDef
+{- 
+This 'lexer' will create a bunch of useful
+parsers for us to handle some of the basics.
+-}
 
 braces     = Token.braces     lexer
 dot        = Token.dot        lexer
@@ -314,7 +318,15 @@ grace = do
     return $ GraceX g
 
 --- TRANSFORMATIONS
+{- 
+The architecture is to apply many transformations 
+one at a time.
+-}
 
+{- 
+Given a base duration and a number of dots added,
+finds the duration of the resulting dotted note.
+-}
 addDots :: Duration -> Int -> Duration
 addDots dur numDots = dur * (2 - ((1/2) ^ numDots))
 
@@ -338,15 +350,22 @@ lookupDur base = case (lookup base commonDurs) of
     Just d -> d
     Nothing -> error $ "unknown duration \""++base++"\". If you want an arbitrary rational duration, you need to prefix it with \"\\d\"."
 
-makeAllDurationsRational :: Tree1a -> Tree2
-makeAllDurationsRational = f where
-    f (Function s mus)      = Function s (f mus)
-    f (Command s t mus)     = Command s t (f mus)
-    f (Leaf p d noteitems)  = Leaf p (makeDurationRational d) noteitems
-    f (Parallel muss)       = Parallel (map f muss)
-    f (GraceX mus )     = GraceX (f mus)
-    f (Sequential muss)     = Sequential (map f muss)
+{- 
+Transformation. 
 
+Lilypond, and thus our DSL, allows you to
+omit the duration of a note when it has the
+same duration as the previous note. 
+
+The first note is given a duration of a quarter
+note if not specified. In Lilypond, this is true
+even if the first note is a grace note, but I
+thought that users might write a grace note with
+no duration fairly often, so here all unmarked 
+grace notes get a duration of an eighth note
+(of course the duration of a grace note is just 
+for ease of reading).
+-}
 fillInMissingDurs :: Tree1 -> Tree1a
 fillInMissingDurs t = fst $ f (CommonDur "4" 0) t where
     f d (Function s mus) = (Function s (fst $ f d mus), snd $ f d mus)
@@ -359,10 +378,37 @@ fillInMissingDurs t = fst $ f (CommonDur "4" 0) t where
     f d (Leaf p Nothing nis) = (Leaf p d nis, d)
     f _ (Leaf p (Just dur) nis) = (Leaf p dur nis, dur)
 
+{- 
+Transformation.
+
+The meaning of this function name is that
+all durations are to be explicitly represented
+as a rational number. Previously, there were durations
+like "dotted quarter" which certainly are rational
+(3/2) but are not represented by a haskell Rational.
+-}
+makeAllDurationsRational :: Tree1a -> Tree2
+makeAllDurationsRational = f where
+    f (Function s mus)      = Function s (f mus)
+    f (Command s t mus)     = Command s t (f mus)
+    f (Leaf p d noteitems)  = Leaf p (makeDurationRational d) noteitems
+    f (Parallel muss)       = Parallel (map f muss)
+    f (GraceX mus )     = GraceX (f mus)
+    f (Sequential muss)     = Sequential (map f muss)
+
 makeDurationRational :: Dur1 -> Duration
 makeDurationRational (RationalDur r) = r
 makeDurationRational (CommonDur base dots) = addDots (lookupDur base) dots
 
+{- 
+Transformation.
+
+The DSL has two ways to represent multiple
+notes sounding at the same time: polyphony
+(<< {} \\ {} >>) and chords (< >). Here we
+are simply converting the parsed chord 
+representation into the polyphony representation.
+-}
 splitChords :: Tree2 -> Tree3
 splitChords = f where
     f (Function s mus)      = Function s (f mus)
@@ -376,6 +422,13 @@ splitChords = f where
     f (Leaf (Perc1 s) d noteitems)  = (Leaf (Perc3 s) d noteitems)
     f (Leaf (Effect1) d noteitems)  = (Leaf (Effect3) d noteitems)
 
+{- 
+Transformation.
+
+Puts the lilypond code directly on the notes,
+as opposed to having constructors which hold the
+code and the notes it modifies.
+-}
 putCodeOnNotes :: Tree3 -> Tree4
 putCodeOnNotes = f where
     f (Function s mus)      = addAnnotationToEveryNote (LongCommand (s++" { ") " } ") (f mus)
@@ -401,7 +454,16 @@ noteItem1to2 = f where
     f (With s)        = NoteCommand2 s
     f (Cents d) = Cents2 d
 
+{- 
+This large function starts the conversion from named-note
+and specified-frequency notes into the 
+pitch class + octave + cents representation that will be
+used elsewhere. Formerly named notes also get a preferred
+accidental.
 
+The "table" has different data depending on which language
+the music is written in.
+-}
 lookupNoteName :: [(String,(PitchClass,Accidental))] -> Pitch3 -> Pitch5
 lookupNoteName _ (NoteName3 "r" _) = Rest5
 lookupNoteName table (NoteName3 base oct) = case (lookup base table) of
@@ -426,6 +488,10 @@ lookupNoteName _ (Frequency3 freq) = let
 lookupNoteName _ (Perc3 s) = Perc5 s
 lookupNoteName _ (Effect3) = Effect5
 
+{-
+Keep the frequency the same but change the written note
+and the cents by which it must be "bent".
+-}
 rewriteUpHalfstep :: (PitchClass,Octave) -> (PitchClass,Octave)
 rewriteUpHalfstep (pc, oct) = 
     if pc == B
@@ -438,12 +504,22 @@ rewriteDownHalfstep (pc, oct) =
     then (B, oct-1)
     else (toEnum $ fromEnum pc - 1, oct)
 
+{- 
+Takes a formerly named note and applies the pitch bends on it.
+
+Multiple pitch bends on a note are added together.
+
+I pronounce "nis" as /naɪz/.
+-}
 addCents :: (Pitch5,[NoteItem2]) -> (Pitch5,[NoteItem2])
 addCents (p, []) = (p, [])
 addCents (RegularNote pc oct cents maybeAcc, (Cents2 d):nis) =
     addCents (RegularNote pc oct (cents+d) maybeAcc, nis)
 addCents (p, nis) = (p, nis)
 
+{-
+If the pitch bend is extreme, then just consider this note to be a frequency.
+-}
 fixCents :: Pitch5 -> Pitch5
 fixCents (RegularNote pc oct cents maybeAcc) = 
     if cents > 50 || cents < -50
@@ -451,6 +527,10 @@ fixCents (RegularNote pc oct cents maybeAcc) =
     else RegularNote pc oct cents maybeAcc
 fixCents p = p
 
+{- 
+Transformation.
+
+-}
 refinePitches :: [(String,(PitchClass,Accidental))] -> Tree4 -> Tree5
 refinePitches table (ParallelY ts) = ParallelY (map (refinePitches table) ts)
 refinePitches table (SequentialY ts) = SequentialY (map (refinePitches table) ts)
@@ -461,6 +541,10 @@ refinePitches table (LeafY p3 d nis) = let
     p5'' = fixCents p5'
     in LeafY p5'' d nis'
 
+{- 
+Transformation.
+
+-}
 pitch5toPitch :: Tree5 -> Tree6
 pitch5toPitch (ParallelY muss) = ParallelY (map pitch5toPitch muss)
 pitch5toPitch (SequentialY muss) = SequentialY (map pitch5toPitch muss)
