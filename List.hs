@@ -1,3 +1,5 @@
+{-# LANGUAGE Rank2Types #-}
+
 module List where
 
 import Types
