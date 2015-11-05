@@ -10,12 +10,12 @@ import List
 import qualified Output.LilypondSettings
 
 import Control.Lens
-import Data.Maybe (fromJust,isJust,catMaybes)
-import Data.Tuple (swap)
-import Data.List (concat, intersperse, sortBy, sort, group, find)
-import Control.Applicative ((<$>),(<|>))
-import Data.Monoid ((<>))
-import Safe (readMay)
+import Data.Maybe
+import Data.Tuple
+import Data.List
+import Control.Applicative
+import Data.Monoid
+import Safe
 
 testRender :: Music -> String
 testRender mu = "\\version \"2.16.2\"\n\\language \"english\"\n\\score {\n\\new Staff \\with {\nmidiInstrument = \"bassoon\"\n} { \n\\once \\override Staff.TimeSignature #'stencil = ##f \n\\clef bass\n\\cadenzaOn " ++ (listRender mu) ++ "\n\\cadenzaOff\n \\bar \"|\"\n}\\layout { }\n\\midi { }\n}"

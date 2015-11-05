@@ -12,8 +12,8 @@ import Language.Haskell.TH.Quote
 import Language.Haskell.TH 
 import Control.Applicative ((<*))
 import Control.Lens
-import Data.List (sortBy)
-import Data.Maybe (fromJust)
+import Data.List
+import Data.Maybe
 import Types hiding (chord)
 import Tables
 

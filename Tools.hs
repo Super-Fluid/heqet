@@ -6,7 +6,7 @@ import List
 import Control.Lens
 import Data.List
 import Control.Applicative
-import Data.Maybe (mapMaybe)
+import Data.Maybe
 
 mapOverNotes :: (Note a -> Note a) -> MusicOf a -> MusicOf a
 mapOverNotes = map . fmap
