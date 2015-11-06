@@ -17,12 +17,6 @@ import Control.Applicative
 import Data.Monoid
 import Safe
 
-testRender :: Music -> String
-testRender mu = "\\version \"2.16.2\"\n\\language \"english\"\n\\score {\n\\new Staff \\with {\nmidiInstrument = \"bassoon\"\n} { \n\\once \\override Staff.TimeSignature #'stencil = ##f \n\\clef bass\n\\cadenzaOn " ++ (listRender mu) ++ "\n\\cadenzaOff\n \\bar \"|\"\n}\\layout { }\n\\midi { }\n}"
-
-listRender :: Music -> String
-listRender intimes = concat $ intersperse " " $ map toLy $ map (\i -> (i^.val,i^.dur)) intimes
-
 toLy (note,dur) = renderPitch (note^.pitch) (note^.acc) ++ renderDuration (dur)
 
 renderPitch :: Ly -> (Maybe Accidental) -> String
@@ -79,28 +73,49 @@ data WrittenNote = WrittenNote {
     deriving (Show)
 makeLenses ''WrittenNote
 
-type NoteInProgress = (Note Ly, WrittenNote)
+data MultiPitchLy = OneLy Ly | ManyLy [Ly]
 
-startRenderingNote :: InTime (Note Ly) -> NoteInProgress
+type NoteInProgress = (Note MultiPitchLy, WrittenNote)
+
+startRenderingNote :: InTime (Note MultiPitchLy) -> NoteInProgress
 startRenderingNote it = (it^.val, WrittenNote [] "" (it^.dur) [] [])
 
 renderNoteBodyInStaff :: NoteInProgress -> NoteInProgress
 renderNoteBodyInStaff (n, w) = let
     body' = case n^.pitch of 
-        Pitch p -> renderPitch' p (n^.acc)
-        Perc s -> xNote n
-        Rest -> "r"
-        Effect -> xNote n
-        Lyric s -> xNote n
-        Grace mus -> "\\grace {" ++ renderInStaff mus ++ "}"
+        OneLy ly -> renderOneNoteBodyInStaff n ly
+        ManyLy lys -> renderManyNoteBodiesInStaff n lys
     nis' = case n^.pitch of
-        Pitch _ -> w^.noteItems 
-        Perc s -> (markupText s):(w^.noteItems)
-        Rest -> w^.noteItems
-        Effect -> w^.noteItems
-        Lyric s -> (markupText s):(w^.noteItems)
-        Grace mus -> w^.noteItems
+        OneLy ly -> (getMarkupFromOneLy ly)++(w^.noteItems)
+        ManyLy lys -> (getMarkupFromManyLys lys)++(w^.noteItems)
     in (n, w & noteItems .~ nis' & body .~ body')
+
+renderOneNoteBodyInStaff :: (Note MultiPitchLy) -> Ly -> String
+renderOneNoteBodyInStaff n ly = case ly of
+    Pitch p -> renderPitch' p (n^.acc)
+    Perc s -> xNote n
+    Rest -> "r"
+    Effect -> xNote n
+    Lyric s -> xNote n
+    Grace mus -> "\\grace {" ++ allRendering mus ++ "}"
+
+renderManyNoteBodiesInStaff :: (Note MultiPitchLy) -> [Ly] -> String
+renderManyNoteBodiesInStaff n lys = "< " ++ (concat $ intersperse " " $ map (renderOneNoteBodyInStaff n) lys) ++ " >"
+
+{-
+Get markup to render Ly types that we don't have a better way to render.
+-}
+getMarkupFromOneLy :: Ly -> [String]
+getMarkupFromOneLy ly = case ly of
+    Pitch _ -> []
+    Perc s -> [markupText s]
+    Rest -> []
+    Effect -> []
+    Lyric s -> [markupText s]
+    Grace mus -> []
+
+getMarkupFromManyLys :: [Ly] -> [String]
+getMarkupFromManyLys = concat . map getMarkupFromOneLy
 
 renderNoteItems :: NoteInProgress -> NoteInProgress
 renderNoteItems (n,w) = let
@@ -125,7 +140,7 @@ renderArt Staccatissimo = "-!"
 renderArt Stopped = "-+"
 renderArt Accent = "->"
 
-renderInStaff :: Music -> String
+renderInStaff :: [InTime (Note MultiPitchLy)] -> String
 renderInStaff mus = concat $ intersperse " " $ map f mus where
     f note = note
         & startRenderingNote
@@ -141,7 +156,7 @@ extractRenderedNote (n,w) =
     ++ (concat $ w^.noteItems)
     ++ (concat $ reverse $ w^.following)
 
-xNote :: Note Ly -> String
+xNote :: Note MultiPitchLy -> String
 xNote n = let 
     fakePitch = case n^.clef of
         Just Treble  -> "b'"
@@ -205,8 +220,40 @@ findPolys lin = reverse $ foldl f [] (timePitchSort lin) where
     checkLineFit it line = all (not . conflictsWith it) line
     conflictsWith it1 it2 = it1^.t < (it2^.t + it2^.dur) && it2^.t > (it1^.t + it1^.dur)
 
+scoreToLy :: Stage1 -> String
+scoreToLy score = basicBeginScore ++ (concat $ map staffToLy score) ++ basicEndScore
 
-allRendering :: Music -> Stage1
+staffToLy :: Staff -> String
+staffToLy staff = basicBeginStaff ++ (concat $ intersperse " " $ map polyToLy staff) ++ basicEndStaff
+
+polyToLy :: Polyphony -> String
+polyToLy [] = error "empty polyphony"
+polyToLy [lin] = linToLy lin
+polyToLy lins = " << " ++ (concat $ intersperse "\\\\" $ map (" { "++) $ map (++" } ") $ map linToLy lins) ++ ">> "
+
+{-
+Pack the multiple notes in a ChordR into
+a single note with multiple pitches.
+
+All the notes in a chord are theoretically supposed to be
+the same except for the pitch, so we only need to look
+at the first one.
+-}
+packChordsIntoMultiPitchNotes :: LinearNote -> (Note MultiPitchLy)
+packChordsIntoMultiPitchNotes (UniNote n) = n & pitch %~ OneLy
+packChordsIntoMultiPitchNotes (ChordR ns) = (head ns) & pitch .~ ManyLy (map (^.pitch) ns)
+
+linToLy :: Linear -> String
+linToLy lin = timePitchSort lin 
+    & map (& val %~ packChordsIntoMultiPitchNotes)
+    & map startRenderingNote
+    & map renderNoteBodyInStaff
+    & map renderNoteItems
+    & map extractRenderedNote
+    & intersperse " "
+    & concat
+
+allRendering :: Music -> String
 allRendering mus = mus
     & toStage0
     & map combineChords
@@ -215,3 +262,4 @@ allRendering mus = mus
     & (map.map.map) reverse -- put each Linear in order
     & map reverse -- put the Polyphonys in time order
     & (map.map) (filter (not.null)) -- remove empty Linears from each Polyphony
+    & scoreToLy

@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, Rank2Types #-}
+{-# LANGUAGE FlexibleInstances, OverlappingInstances, Rank2Types #-}
 
 module Tools where
 
@@ -48,6 +48,9 @@ takeMusic pit mus = lens (mapMaybe f) (\s a -> a++s) where
 
 instance Ord (InTime (Note Ly)) where
     compare it1 it2 = (it1^.t) `compare` (it2^.t) <> (pitch2num $ it1^.val) `compare` (pitch2num $ it2^.val)
+
+instance (Eq a) => Ord (InTime a) where
+    compare it1 it2 = (it1^.t) `compare` (it2^.t)
 
 pitch2num :: Note Ly -> Double
 pitch2num n = let x = ly2num (n^.pitch)
