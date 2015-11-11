@@ -25,8 +25,8 @@ renderPitch Rest _ = "r"
 renderPitch (Perc p) _ = "c"
 
 renderPitchAcc :: PitchClass -> (Maybe Accidental) -> String
-renderPitchAcc pc (Just acc) = fromJust $ lookup (pc,acc) (map swap Tables.en)
-renderPitchAcc pc Nothing = fromJust $ lookup pc (map (\((p,a),s) -> (p,s)) (map swap Tables.en))
+renderPitchAcc pc (Just acc) = fromJustNote "renderPitchAcc (with acc)" $ lookup (pc,acc) (map swap Tables.en)
+renderPitchAcc pc Nothing = fromJustNote "renderPitchAcc (no acc)" $ lookup pc (map (\((p,a),s) -> (p,s)) (map swap Tables.en))
 
 commonDurations :: [(Duration,String)]
 commonDurations = [
@@ -54,7 +54,7 @@ commonDurations = [
 
 renderDuration :: Duration -> String
 renderDuration dur
-    | isJust (lookup dur commonDurations) = fromJust (lookup dur commonDurations)
+    | isJust (lookup dur commonDurations) = fromJustNote "renderDuration" (lookup dur commonDurations)
     | otherwise = "1"
 
 renderOct :: Octave -> String
@@ -74,6 +74,7 @@ data WrittenNote = WrittenNote {
 makeLenses ''WrittenNote
 
 data MultiPitchLy = OneLy Ly | ManyLy [Ly]
+    deriving (Show)
 
 type NoteInProgress = (Note MultiPitchLy, WrittenNote)
 
@@ -202,11 +203,11 @@ timePitchSort = sortBy $ \it1 it2 -> (it1^.t) `compare` (it2^.t) <> (pitchLN $ i
 
 findPolys :: Linear -> Staff
 findPolys lin = reverse $ foldl f [] (timePitchSort lin) where
-    f [] it = [ emptyCol & atIndex 1 .~ [it] ]
+    f [] it = [ emptyCol & atIndex 0 .~ [it] ]
     f (current:past) it = let (voiceN,succeeded) = tryToFit it current
         in if not succeeded
            then (emptyCol & atIndex 1 .~ [it]):current:past
-           else if voiceN == 1
+           else if voiceN == 0
                 then if all (checkLineFit it) current
                      then (emptyCol & atIndex 1 .~ [it]):current:past
                      else (current & atIndex 1 %~ (it:)):past
@@ -260,6 +261,5 @@ allRendering mus = mus
     & map timePitchSort
     & map findPolys
     & (map.map.map) reverse -- put each Linear in order
-    & map reverse -- put the Polyphonys in time order
     & (map.map) (filter (not.null)) -- remove empty Linears from each Polyphony
     & scoreToLy
