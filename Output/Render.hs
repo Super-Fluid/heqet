@@ -206,11 +206,11 @@ findPolys lin = reverse $ foldl f [] (timePitchSort lin) where
     f [] it = [ emptyCol & atIndex 0 .~ [it] ]
     f (current:past) it = let (voiceN,succeeded) = tryToFit it current
         in if not succeeded
-           then (emptyCol & atIndex 1 .~ [it]):current:past
+           then (emptyCol & atIndex 0 .~ [it]):current:past
            else if voiceN == 0
                 then if all (checkLineFit it) current
-                     then (emptyCol & atIndex 1 .~ [it]):current:past
-                     else (current & atIndex 1 %~ (it:)):past
+                     then (emptyCol & atIndex 0 .~ [it]):current:past
+                     else (current & atIndex 0 %~ (it:)):past
                 else (current & atIndex voiceN %~ (it:)):past
     emptyCol = replicate Output.LilypondSettings.maxNumberOfVoices []
     tryToFit :: (InTime LinearNote) -> Polyphony -> (Int,Bool)
