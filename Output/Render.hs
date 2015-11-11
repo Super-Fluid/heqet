@@ -73,7 +73,7 @@ data WrittenNote = WrittenNote {
     deriving (Show)
 makeLenses ''WrittenNote
 
-data MultiPitchLy = OneLy Ly | ManyLy [Ly]
+data MultiPitchLy = OneLy (Ly,Maybe Accidental) | ManyLy [(Ly,Maybe Accidental)]
     deriving (Show)
 
 type NoteInProgress = (Note MultiPitchLy, WrittenNote)
@@ -91,23 +91,23 @@ renderNoteBodyInStaff (n, w) = let
         ManyLy lys -> (getMarkupFromManyLys lys)++(w^.noteItems)
     in (n, w & noteItems .~ nis' & body .~ body')
 
-renderOneNoteBodyInStaff :: (Note MultiPitchLy) -> Ly -> String
-renderOneNoteBodyInStaff n ly = case ly of
-    Pitch p -> renderPitch' p (n^.acc)
+renderOneNoteBodyInStaff :: (Note MultiPitchLy) -> (Ly,Maybe Accidental) -> String
+renderOneNoteBodyInStaff n (ly,a) = case ly of
+    Pitch p -> renderPitch' p a
     Perc s -> xNote n
     Rest -> "r"
     Effect -> xNote n
     Lyric s -> xNote n
     Grace mus -> "\\grace {" ++ allRendering mus ++ "}"
 
-renderManyNoteBodiesInStaff :: (Note MultiPitchLy) -> [Ly] -> String
+renderManyNoteBodiesInStaff :: (Note MultiPitchLy) -> [(Ly,Maybe Accidental)] -> String
 renderManyNoteBodiesInStaff n lys = "< " ++ (concat $ intersperse " " $ map (renderOneNoteBodyInStaff n) lys) ++ " >"
 
 {-
 Get markup to render Ly types that we don't have a better way to render.
 -}
-getMarkupFromOneLy :: Ly -> [String]
-getMarkupFromOneLy ly = case ly of
+getMarkupFromOneLy :: (Ly,Maybe Accidental) -> [String]
+getMarkupFromOneLy (ly,_) = case ly of
     Pitch _ -> []
     Perc s -> [markupText s]
     Rest -> []
@@ -115,7 +115,7 @@ getMarkupFromOneLy ly = case ly of
     Lyric s -> [markupText s]
     Grace mus -> []
 
-getMarkupFromManyLys :: [Ly] -> [String]
+getMarkupFromManyLys :: [(Ly,Maybe Accidental)] -> [String]
 getMarkupFromManyLys = concat . map getMarkupFromOneLy
 
 renderNoteItems :: NoteInProgress -> NoteInProgress
@@ -241,8 +241,8 @@ the same except for the pitch, so we only need to look
 at the first one.
 -}
 packChordsIntoMultiPitchNotes :: LinearNote -> (Note MultiPitchLy)
-packChordsIntoMultiPitchNotes (UniNote n) = n & pitch %~ OneLy
-packChordsIntoMultiPitchNotes (ChordR ns) = (head ns) & pitch .~ ManyLy (map (^.pitch) ns)
+packChordsIntoMultiPitchNotes (UniNote n) = n & pitch .~ OneLy (n^.pitch,n^.acc)
+packChordsIntoMultiPitchNotes (ChordR ns) = (head ns) & pitch .~ ManyLy (zip (map (^.pitch) ns) (map (^.acc) ns))
 
 linToLy :: Linear -> String
 linToLy lin = timePitchSort lin 
