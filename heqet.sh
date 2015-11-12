@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-runhaskell -XQuasiQuotes $1
+runhaskell -XQuasiQuotes $1 | lilypond -o$1 -
