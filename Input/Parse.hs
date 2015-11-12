@@ -371,10 +371,10 @@ fillInMissingDurs :: Tree1 -> Tree1a
 fillInMissingDurs t = fst $ f (CommonDur "4" 0) t where
     f d (Function s mus) = (Function s (fst $ f d mus), snd $ f d mus)
     f d (Command s t mus) = (Command s t (fst $ f d mus), snd $ f d mus)
-    f d (Parallel muss) = (Parallel (fst results), snd results) where
-        results = foldr (\mus (accum,_) -> ((fst $ f d mus):accum,(snd $ f d mus))) ([],d) muss
+    f d (Parallel muss) = (Parallel (reverse $ fst results), snd results) where
+        results = foldl (\(accum,_) mus -> ((fst $ f d mus):accum,(snd $ f d mus))) ([],d) muss
     f d (GraceX mus) = (GraceX (fst $ f (CommonDur "8" 0) mus), d)
-    f d (Sequential muss) = (Sequential (fst results), snd results) where
+    f d (Sequential muss) = (Sequential (reverse $ fst results), snd results) where
         results = foldl (\(accum,lastdur) mus -> ((fst $ f lastdur mus):accum,(snd $ f lastdur mus))) ([],d) muss
     f d (Leaf p Nothing nis) = (Leaf p d nis, d)
     f _ (Leaf p (Just dur) nis) = (Leaf p dur nis, dur)

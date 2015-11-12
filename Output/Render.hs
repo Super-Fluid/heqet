@@ -8,6 +8,7 @@ import Tools
 import Output.RenderTypes
 import List
 import qualified Output.LilypondSettings
+import qualified Instruments
 
 import Control.Lens
 import Data.Maybe
@@ -263,3 +264,9 @@ allRendering mus = mus
     & (map.map.map) reverse -- put each Linear in order
     & (map.map) (filter (not.null)) -- remove empty Linears from each Polyphony
     & scoreToLy
+
+writeScore = putStrLn . allRendering
+quickScore m = writeScore $ m & mapOverNotes (\x -> x
+    & line .~ Just "1"
+    & inst .~ Just Instruments.melody
+    )
