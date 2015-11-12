@@ -1,6 +1,11 @@
 {-# LANGUAGE QuasiQuotes #-}
 
-module Heqet where
+module Heqet
+    ( module Heqet
+    , module Output.Render
+    , module Tools
+    , module Instruments
+    ) where
 
 import Input.English
 import Types
