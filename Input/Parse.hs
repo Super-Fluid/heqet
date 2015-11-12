@@ -202,7 +202,7 @@ effect = do
     return Effect1
 
 duration :: Parser (Maybe Dur1)
-duration = rationalDur <|> commonDur <|> noDur
+duration = try rationalDur <|> commonDur <|> noDur
 
 rationalDur :: Parser (Maybe Dur1)
 rationalDur = do
