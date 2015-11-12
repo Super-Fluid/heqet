@@ -28,3 +28,9 @@ poly = [music| f1 << { c4 g, } \\ { e2 } >> <g, b>2 c1\fermata |]
         & line .~ Just "1"
         & inst .~ Just Instruments.melody
         )
+
+missingdur = [music| c1 d |] & mapOverNotes (\x -> x
+    & clef .~ Just Treble
+    & line .~ Just "1"
+    & inst .~ Just Instruments.melody
+    )

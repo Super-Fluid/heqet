@@ -375,7 +375,7 @@ fillInMissingDurs t = fst $ f (CommonDur "4" 0) t where
         results = foldr (\mus (accum,_) -> ((fst $ f d mus):accum,(snd $ f d mus))) ([],d) muss
     f d (GraceX mus) = (GraceX (fst $ f (CommonDur "8" 0) mus), d)
     f d (Sequential muss) = (Sequential (fst results), snd results) where
-        results = foldr (\mus (accum,lastdur) -> ((fst $ f lastdur mus):accum,(snd $ f lastdur mus))) ([],d) muss
+        results = foldl (\(accum,lastdur) mus -> ((fst $ f lastdur mus):accum,(snd $ f lastdur mus))) ([],d) muss
     f d (Leaf p Nothing nis) = (Leaf p d nis, d)
     f _ (Leaf p (Just dur) nis) = (Leaf p dur nis, dur)
 
