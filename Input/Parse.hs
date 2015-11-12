@@ -290,6 +290,9 @@ integerFloat = do
 noteCommand :: Parser NoteItem1
 noteCommand =  do
     char '\\'
+    try $ notFollowedBy $ string "grace"
+    try $ notFollowedBy $ string "function"
+    try $ notFollowedBy $ string "command"
     name <- many1 alphaNum
     return $ NoteCommand name
 
