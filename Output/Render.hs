@@ -207,7 +207,7 @@ findPolys lin = reverse $ foldl f [] (timePitchSort lin) where
     f [] it = [ emptyCol & atIndex 0 .~ [it] ]
     f (current:past) it = let (voiceN,succeeded) = tryToFit it current
         in if not succeeded
-           then (emptyCol & atIndex 0 .~ [it]):current:past
+           then error "too many simultaneous notes to fit on a staff"
            else if voiceN == 0
                 then if all (checkLineFit it) current
                      then (emptyCol & atIndex 0 .~ [it]):current:past
@@ -218,9 +218,9 @@ findPolys lin = reverse $ foldl f [] (timePitchSort lin) where
     tryToFit it col = tryToFitHelper $ checkFit it col
     tryToFitHelper Nothing = (undefined,False)
     tryToFitHelper (Just i) = (i,True)
-    checkFit it col = snd <$> find (checkLineFit it . fst) (zipWith (,) col [0..])
+    checkFit it col = snd <$> find (checkLineFit it . fst) (zip col [0..])
     checkLineFit it line = all (not . conflictsWith it) line
-    conflictsWith it1 it2 = it1^.t < (it2^.t + it2^.dur) && it2^.t > (it1^.t + it1^.dur)
+    conflictsWith it1 it2 = it1^.t < (it2^.t + it2^.dur) && it2^.t < (it1^.t + it1^.dur)
 
 scoreToLy :: Stage1 -> String
 scoreToLy score = basicBeginScore ++ (concat $ map staffToLy score) ++ basicEndScore
