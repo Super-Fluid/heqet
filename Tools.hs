@@ -64,3 +64,6 @@ ly2num Rest = Just 0
 ly2num (Perc _) = Just 0 -- expand on this according to common drum notation?
 ly2num (Lyric _) = Nothing
 ly2num (Grace _) = Just 0 
+
+durationOf :: MusicOf a -> Duration
+durationOf m = max $ map (\it -> it^.t + it^.dur) m
