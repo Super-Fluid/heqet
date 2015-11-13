@@ -5,6 +5,7 @@ module Heqet
     , module Output.Render
     , module Tools
     , module Instruments
+    , module Types
     ) where
 
 import Input.English
