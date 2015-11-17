@@ -1,7 +1,11 @@
 {-# LANGUAGE QuasiQuotes #-}
 module Output.Templates where
 
+import Types
+
 import Text.RawString.QQ
+import Control.Lens
+import Data.List
 
 -- operating on music:
 basicScore :: String -> String
@@ -15,11 +19,11 @@ basicScore contents = [r|
 \midi { }
 }|]
 
-basicStaff :: String -> String
-basicStaff contents = [r|\new Staff \with {
-midiInstrument = "bassoon"
-instrumentName = "foo"
-shortInstrumentName = "f"
+basicStaff :: [Instrument] -> String -> String
+basicStaff insts contents = [r|\new Staff \with {
+midiInstrument = "|] ++ (insts !! 0)^.midiInstrument ++ [r|"
+instrumentName = "|] ++ (concat $ intersperse " & " $ map (^.name) insts) ++ [r|"
+shortInstrumentName = "|] ++ (concat $ intersperse " & " $ map (^.shortName) insts) ++ [r|"
 } { 
 \once \override Staff.TimeSignature #'stencil = ##f 
 \clef bass

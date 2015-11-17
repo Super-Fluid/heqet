@@ -74,7 +74,7 @@ instance Show Instrument where
     show ins = "<Instrument " ++ (_name ins) ++ ">"
 
 instance Eq Instrument where
-    i == j = (_kind i) == (_kind j)
+    i == j = (_name i) == (_name j)
 
 data Note a = Note { 
       _pitch :: a

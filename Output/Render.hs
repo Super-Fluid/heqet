@@ -225,8 +225,17 @@ findPolys lin = reverse $ foldl f [] (timePitchSort lin) where
 scoreToLy :: Stage1 -> String
 scoreToLy score = basicScore (concat $ map staffToLy score)
 
+staffInstruments :: Staff -> [Instrument]
+staffInstruments = let
+    fromLinearNote (UniNote n) = [n^.inst]
+    fromLinearNote (ChordR ns) = map (^.inst) ns
+    fromLinear = concatMap (\it -> fromLinearNote (it^.val))
+    fromPoly = concatMap fromLinear
+    fromStaff = concatMap fromPoly
+    in catMaybes . nub . fromStaff
+
 staffToLy :: Staff -> String
-staffToLy staff = basicStaff (concat $ intersperse " " $ map polyToLy staff)
+staffToLy staff = basicStaff (staffInstruments staff) (concat $ intersperse " " $ map polyToLy staff)
 
 polyToLy :: Polyphony -> String
 polyToLy [] = error "empty polyphony"
