@@ -42,11 +42,16 @@ data Instrument = Instrument {
       _midiInstrument :: String
     , _pickUpTime :: PerformanceDuration
     , _putDownTime :: PerformanceDuration
+    -- in concert pitch
     , _annotatePlayability :: Music -> Music
-    , _assignClefs :: Music -> Music
+    , _assignConcertClefs :: Music -> Music
+    , _assignWrittenClefs :: Music -> Music
+    -- the pitch that the instrument sounds when playing a written middle c
     , _transposition :: Pitch
     , _name :: String
     , _shortName :: String
+    -- name can be whatever, like "Siouxza" (the YPMB way to write "Sousaphone"),
+    -- but the kind should be standard, like "Tuba" in this case.
     , _kind :: String
     }
 
