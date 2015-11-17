@@ -32,8 +32,8 @@ data InTime a = InTime {
 
 type Cents = Double
 data Pitch = MakePitch {
-    _pc :: PitchClass 
-  , _oct :: Octave 
+    _oct :: Octave
+  , _pc :: PitchClass 
   , _cents :: Cents
 }
     deriving (Eq, Ord, Show, Read)

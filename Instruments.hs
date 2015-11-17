@@ -5,21 +5,9 @@ module Instruments where
 import Types
 import Tools
 import Input.English
+import Assigners
 
 import Control.Lens
-
--- for convenience we define clef assigning shortcuts
-allTreble = mapOverNotes (& clef .~ Just Treble)
-bassOrTreble = allTreble -- TODO!
-bassAltTenorTreble = allTreble
-bassAltAltoTreble = allTreble
-bassAltTreble = allTreble -- different from bassOrTreble in that it favors bass clef
-altoAltTreble = mapOverNotes (& clef .~ Just Alto)
-allTreble8 = mapOverNotes (& clef .~ Just Treble8)
-
--- for defining playability:
-simpleRange :: Pitch -> Pitch -> Music -> Music
-simpleRange low hi = id -- TODO!
 
 melody = Instrument { 
       _midiInstrument = "acoustic grand"
