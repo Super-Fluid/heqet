@@ -1,15 +1,36 @@
+{-# LANGUAGE QuasiQuotes #-}
 module Output.Templates where
 
--- operating on music:
-basicBeginScore = "\\version \"2.16.2\"\n\\language \"english\"\n\\score { <<\n"
-basicEndScore = ">> \n\\layout { }\n\\midi { }\n}"
+import Text.RawString.QQ
 
-basicBeginStaff = "\\new Staff \\with {\nmidiInstrument = \"bassoon\"\n} { \n\\once \\override Staff.TimeSignature #'stencil = ##f \n\\clef bass\n\\cadenzaOn "
-basicEndStaff = "\n\\cadenzaOff\n \\bar \"|\"\n}\n"
+-- operating on music:
+basicBeginScore = [r|
+\version "2.16.2"
+\language "english"
+\score { <<
+|]
+basicEndScore = [r|
+>> 
+\layout { }
+\midi { }
+}|]
+
+basicBeginStaff = [r|\new Staff \with {
+midiInstrument = "bassoon"
+instrumentName = "foo"
+shortInstrumentName = "f"
+} { 
+\once \override Staff.TimeSignature #'stencil = ##f 
+\clef bass
+\cadenzaOn |]
+basicEndStaff = [r|
+\cadenzaOff
+\bar "|."}
+|]
 
 -- operating on notes:
 errorNoAccidental :: String
-errorNoAccidental = "^\\markup{\\sharp\\flat}"
+errorNoAccidental = [r|^\\markup{\\sharp\\flat}|]
 
 -- etc
 markupText :: String -> String
