@@ -223,10 +223,10 @@ findPolys lin = reverse $ foldl f [] (timePitchSort lin) where
     conflictsWith it1 it2 = it1^.t < (it2^.t + it2^.dur) && it2^.t < (it1^.t + it1^.dur)
 
 scoreToLy :: Stage1 -> String
-scoreToLy score = basicBeginScore ++ (concat $ map staffToLy score) ++ basicEndScore
+scoreToLy score = basicScore (concat $ map staffToLy score)
 
 staffToLy :: Staff -> String
-staffToLy staff = basicBeginStaff ++ (concat $ intersperse " " $ map polyToLy staff) ++ basicEndStaff
+staffToLy staff = basicStaff (concat $ intersperse " " $ map polyToLy staff)
 
 polyToLy :: Polyphony -> String
 polyToLy [] = error "empty polyphony"

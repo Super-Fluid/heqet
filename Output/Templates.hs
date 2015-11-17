@@ -4,26 +4,26 @@ module Output.Templates where
 import Text.RawString.QQ
 
 -- operating on music:
-basicBeginScore = [r|
+basicScore :: String -> String
+basicScore contents = [r|
 \version "2.16.2"
 \language "english"
 \score { <<
-|]
-basicEndScore = [r|
+|] ++ contents ++ [r|
 >> 
 \layout { }
 \midi { }
 }|]
 
-basicBeginStaff = [r|\new Staff \with {
+basicStaff :: String -> String
+basicStaff contents = [r|\new Staff \with {
 midiInstrument = "bassoon"
 instrumentName = "foo"
 shortInstrumentName = "f"
 } { 
 \once \override Staff.TimeSignature #'stencil = ##f 
 \clef bass
-\cadenzaOn |]
-basicEndStaff = [r|
+\cadenzaOn |] ++ contents ++ [r|
 \cadenzaOff
 \bar "|."}
 |]
