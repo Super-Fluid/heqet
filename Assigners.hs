@@ -81,4 +81,9 @@ isBelow _ _ = False
 
 -- for defining playability:
 simpleRange :: Pitch -> Pitch -> Music -> Music
-simpleRange low hi = id -- TODO!
+simpleRange low high = mapOverNotes $ \n -> 
+    if (n^.pitch) `isAbove` high
+    then n & errors %~ ("too high!":)
+    else if (n^.pitch) `isBelow` low
+        then n & errors %~ ("too low!":)
+        else n
