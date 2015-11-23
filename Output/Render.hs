@@ -138,7 +138,7 @@ renderArt Staccato = "-."
 renderArt Marcato = "-^"
 renderArt Tenuto = "--"
 renderArt Portato = "-_"
-renderArt Staccatissimo = "-!"
+renderArt Staccatissimo = "-|"
 renderArt Stopped = "-+"
 renderArt Accent = "->"
 

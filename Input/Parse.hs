@@ -252,7 +252,7 @@ tie = char '~' >> return Tie
 articulation :: Parser NoteItem1
 articulation = do
     char '-'
-    c <- oneOf "<>\\'+-!._,~/0123456789("
+    c <- oneOf "<>\\'+-|._,~/0123456789("
     return $ Articulation c
 
 
@@ -595,14 +595,14 @@ placeNoteItems (ly, nis) = let baseNote = emptyNote { _pitch = ly }
             withcents other = other
             in bn & pitch %~ withcents
 
-isSimpleArt c = c `elem` ".->^+_!"
+isSimpleArt c = c `elem` ".->^+_|"
 getSimpleArt c = fromJust $ lookup c [
     ('.', Staccato)
    ,('-', Tenuto)
    ,('>', Accent)
    ,('+', Stopped)
    ,('_', Portato)
-   ,('!', Staccatissimo)
+   ,('|', Staccatissimo)
    ,('^', Marcato)
    ]
 
