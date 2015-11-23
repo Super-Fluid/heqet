@@ -133,6 +133,15 @@ renderNoteItems (n,w) = let
         & noteItems .~ (n^.noteCommands) ++ articulations ++ markedErrors
     in (n,w')
 
+applySlurs :: [NoteInProgress] -> [NoteInProgress]
+applySlurs ns = reverse $ snd $ foldl applySlurs'h (False,[]) ns where
+    applySlurs'h :: (Bool,[NoteInProgress]) -> NoteInProgress -> (Bool,[NoteInProgress])
+    applySlurs'h (isInSlur,acc) note
+        | isInSlur && note^._1.isSlurred = (True,(note:acc))
+        | isInSlur && otherwise = (False,(note & _2.noteItems %~ (")":) ):acc)
+        | otherwise && note^._1.isSlurred = (True,(note & _2.noteItems %~ ("(":) ):acc)
+        | otherwise && otherwise = (False,(note:acc))
+
 renderArt :: SimpleArticulation -> String
 renderArt Staccato = "-."
 renderArt Marcato = "-^"
@@ -172,24 +181,23 @@ xNote n = let
 renderPitch' :: Pitch -> (Maybe Accidental) -> String
 renderPitch' p acc = renderPitchAcc (p^.pc) acc ++ renderOct (p^.oct)
 
-toStage0 :: Music -> [Linear]
-toStage0 mus = map phraseToLinear musicInLines where
-    musicInLines = (allVoices mus) & map (\v -> mus^.ofLine v)
+toStage0 :: Music -> [Music]
+toStage0 mus = (allVoices mus) & map (\v -> mus^.ofLine v)
 
 allVoices :: Music -> [String]
 allVoices = catMaybes.(map head).group.sort.(map (^.val.line))
 
-phraseToLinear :: Music -> Linear
-phraseToLinear = map (\it -> it & val .~ (UniNote $ it^.val))
+isChordable :: InTime (Note Ly) -> InTime (Note Ly) -> Bool
+isChordable it1 it2 = (it1^.dur == it2^.dur) && (it1^.t == it2^.t) &&
+    (it1^.val.isSlurred == it2^.val.isSlurred) &&
+    (it1^.val.isTied == it2^.val.isTied) &&
+    (it1^.val.artics == it2^.val.artics)
 
-isChordable :: InTime a -> InTime a -> Bool
-isChordable it1 it2 = (it1^.dur == it2^.dur) && (it1^.t == it2^.t)
+formChord :: [InTime (Note Ly)] -> InTime LinearNote
+formChord [it] = it & val .~ UniNote (it^.val)
+formChord its = (head its) & val .~ ChordR (its & map (^.val))
 
-formChord :: [InTime LinearNote] -> InTime LinearNote
-formChord [it] = it
-formChord its = (head its) & val .~ ChordR (its & map (^.val) & map (\(UniNote n) -> n))
-
-combineChords :: Linear -> Linear
+combineChords :: Music -> Linear
 combineChords mus = mus 
     & makeBucketsBy isChordable
     & sortBy (\a b -> ((head a)^.t) `compare` ((head b)^.t))
@@ -260,6 +268,7 @@ linToLy lin = timePitchSort lin
     & map startRenderingNote
     & map renderNoteBodyInStaff
     & map renderNoteItems
+    & applySlurs
     & map extractRenderedNote
     & intersperse " "
     & concat
