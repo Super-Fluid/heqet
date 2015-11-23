@@ -14,5 +14,6 @@ import Output.Render
 import Tools
 import TestCases
 import Instruments
+import Assigners
 
 import Control.Lens

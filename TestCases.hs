@@ -34,3 +34,8 @@ missingdur = [music| c1 d |] & mapOverNotes (\x -> x
     & line .~ Just "1"
     & inst .~ Just Instruments.melody
     )
+
+basstreble = [music| c2. d4 ef8 g c' d' ef'4 g' c''2 ef''4. c''16 r8 c8-> |] & mapOverNotes (\x -> x
+    & line .~ Just "1"
+    & inst .~ Just Instruments.horn
+    )
