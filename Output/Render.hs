@@ -130,7 +130,7 @@ renderNoteItems (n,w) = let
     w' = w
         & preceeding .~ beginExpr ++ beginNDExpr
         & following .~ endExpr ++ endNDExpr
-        & noteItems .~ (map ('\\':) $ n^.noteCommands) ++ articulations ++ markedErrors
+        & noteItems .~ (n^.noteCommands) ++ articulations ++ markedErrors
     in (n,w')
 
 renderArt :: SimpleArticulation -> String

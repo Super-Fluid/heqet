@@ -294,7 +294,7 @@ noteCommand =  do
     try $ notFollowedBy $ string "function"
     try $ notFollowedBy $ string "command"
     name <- many1 alphaNum
-    return $ NoteCommand name
+    return $ NoteCommand ('\\':name)
 
 voices1 :: Parser Tree1
 voices1 = do 
