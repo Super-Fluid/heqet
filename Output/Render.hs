@@ -65,7 +65,7 @@ renderOct oct
     | otherwise = replicate (oct) '\''
 
 startRenderingNote :: InTime (Note MultiPitchLy) -> NoteInProgress
-startRenderingNote it = (it^.val, WrittenNote [] "" (it^.dur) [] []) -- TODO: INSTR{UMENTS
+startRenderingNote it = (it^.val, WrittenNote [] "" (it^.dur) [] [])
 
 renderNoteBodyInStaff :: NoteInProgress -> NoteInProgress
 renderNoteBodyInStaff (n, w) = let
@@ -118,14 +118,129 @@ renderNoteItems (n,w) = let
         & noteItems .~ (n^.noteCommands) ++ articulations ++ markedErrors
     in (n,w')
 
-applySlurs :: [NoteInProgress] -> [NoteInProgress]
-applySlurs ns = reverse $ snd $ foldl applySlurs'h (False,[]) ns where
-    applySlurs'h :: (Bool,[NoteInProgress]) -> NoteInProgress -> (Bool,[NoteInProgress])
-    applySlurs'h (isInSlur,acc) note
-        | isInSlur && note^._1.isSlurred = (True,(note:acc))
-        | isInSlur && otherwise = (False,(note & _2.noteItems %~ (")":) ):acc)
-        | otherwise && note^._1.isSlurred = (True,(note & _2.noteItems %~ ("(":) ):acc)
-        | otherwise && otherwise = (False,(note:acc))
+canLinearInProgressBeSlurredTo :: LinearInProgress -> Bool
+canLinearInProgressBeSlurredTo [] = False
+canLinearInProgressBeSlurredTo (nip:_) = canMultiPitchLyBeSlurredTo (nip^._1.pitch)
+
+-- A chord can be slurred to if any lys in it can be.
+canMultiPitchLyBeSlurredTo :: MultiPitchLy -> Bool
+canMultiPitchLyBeSlurredTo (OneLy (ly,_,_)) = canBeSlurredTo ly
+canMultiPitchLyBeSlurredTo (ManyLy xs) = let
+    lys = map (^._1) xs
+    in any canBeSlurredTo lys
+
+{-
+This function will hopefully be integrated into the Ly class soon.
+-}
+canBeSlurredTo :: Ly -> Bool
+canBeSlurredTo (Pitch _) = True
+canBeSlurredTo Rest = False
+canBeSlurredTo (Perc _) = True
+canBeSlurredTo Effect = True
+canBeSlurredTo (Lyric _) = True
+canBeSlurredTo (Grace _) = True
+
+{- 
+We "apply" the slurs to a staff (a StaffInProgress), meaning 
+that we look at the isSlurred property of notes and figure
+out where to put Lilypond ( and ) marks (and sometimes tenuto
+marks) to notate that articulation.
+-}
+applySlursToStaff :: StaffInProgress -> StaffInProgress
+applySlursToStaff staff = applySlursToStaff'h [] staff where
+    applySlursToStaff'h _ [] = []
+    applySlursToStaff'h slurIns (poly:polys) = let
+        slurableOuts = case polys of
+            [] -> [] -- No more music so nothing for a slur to connect to
+            (lins:_) -> map canLinearInProgressBeSlurredTo lins
+        (slurOuts,processedPoly) = applySlursToPoly slurIns slurableOuts poly
+        processedRemainder = applySlursToStaff'h slurOuts polys
+        in processedPoly:processedRemainder
+
+{- 
+This function basically applies slurs to each of the Linears
+in the Poly. It takes slur info from before and after much like
+applySlursToLinear (see below). We ensure that the given lists
+are big enough for the number of Linears we have by padding the
+lists we get us with False.
+-}
+applySlursToPoly :: [Bool] -> [Bool] -> PolyInProgress -> ([Bool], PolyInProgress)
+applySlursToPoly slurIns slurableOuts lins = let
+    falsePad = replicate Output.LilypondSettings.maxNumberOfVoices False
+    zippedData = zip3 (slurIns ++ falsePad) (slurableOuts ++ falsePad) lins
+    zippedResult = map (\x -> applySlursToLinear (x^._1) (x^._2) (x^._3)) zippedData
+    slurOuts = map (^._1) zippedResult
+    processedLins = map (^._2) zippedResult
+    in (slurOuts,processedLins)
+
+{-
+To apply slurs to the notes in a Linear (technically a
+LinearInProgress) we must know whether there is a slur 
+entering and whether there is something following that
+can be slurred to. At the end of the process, we report
+if there's a slur exiting.
+-}
+applySlursToLinear :: Bool -> Bool -> LinearInProgress -> (Bool, LinearInProgress)
+applySlursToLinear enteringSlur existsSlurableFollowing lin =
+    applySlursToLinear'h (enteringSlur,[]) lin where
+    applySlursToLinear'h :: (Bool,LinearInProgress) -> LinearInProgress -> (Bool,LinearInProgress)
+    applySlursToLinear'h (isInSlur,acc) [] = (False,[]) 
+        -- False because a slur can't come out of a linear with no notes.
+    applySlursToLinear'h (isInSlur,acc) notes = let
+        note = head notes -- notes can't be empty because that's the previous pattern
+        existsSlurableNextNote = case notes of
+            (_:nextNote:_) -> canMultiPitchLyBeSlurredTo (nextNote^._1.pitch)
+            [_] -> existsSlurableFollowing 
+            -- second case: only one note remaining in
+            -- this linear, so we have to use our given information about what
+            -- comes after this.
+        thisNoteIsSlurred = note^._1.isSlurred
+        (slurComingFromNote,modifier) = applySlurToNote 
+                                                isInSlur 
+                                                existsSlurableNextNote 
+                                                thisNoteIsSlurred
+        processedNote = modifier note
+        (slurComingFromLinear,remainder) = applySlursToLinear'h (slurComingFromNote,[]) notes
+        in (slurComingFromLinear,processedNote:remainder)
+
+{-
+Deciding how to mark a slurs is surprisingly tricky.
+Given three bits of information (is this note slurred,
+is this note in a slur, is there a note after this
+which this note could slur to) here's the table of
+actions to take. The boolean result is whether we are
+in a slur after marking this note, and the symbols, if
+any, is the mark(s) to put on this note.
+
+If this note is slurred:
+slurrable next note:    T           F
+                       __________________
+in slur?    T          |T           F )--
+            F          |T (         F --
+
+If this note is not slurred:
+slurrable next note:    T           F
+                       __________________
+in slur?    T          |F )         F )
+            F          |F           F 
+-}
+applySlurToNote :: Bool -> Bool -> Bool -> (Bool,(NoteInProgress -> NoteInProgress))
+applySlurToNote isInSlur existsSlurableNextNote thisNoteIsSlurred = let
+    endSlur = (& _2.noteItems %~ (")":))
+    beginSlur = (& _2.noteItems %~ (")":))
+    tenuto = (& _2.noteItems %~ ("--":))
+            {- If a note is supposed to be slurred but there's nothing for
+            it to be slurred to, we mark it as tenuto instead. There's no
+            need to check if the note already has a tenuto mark since lilypond
+            will ignore a duplicate. -}
+    inSlurNow = existsSlurableNextNote && thisNoteIsSlurred
+    mark
+        | isInSlur && not thisNoteIsSlurred = endSlur
+        | not isInSlur &&     existsSlurableNextNote && thisNoteIsSlurred = beginSlur
+        | not isInSlur && not existsSlurableNextNote && thisNoteIsSlurred = tenuto
+        |     isInSlur && not existsSlurableNextNote && thisNoteIsSlurred = tenuto.endSlur
+        | otherwise = id
+    in (inSlurNow,mark)
 
 renderArt :: SimpleArticulation -> String
 renderArt Staccato = "-."
@@ -216,9 +331,9 @@ findPolys lin = reverse $ foldl f [] (timePitchSort lin) where
     conflictsWith it1 it2 = it1^.t < (it2^.t + it2^.dur) && it2^.t < (it1^.t + it1^.dur)
 
 scoreToLy :: Stage1 -> String
-scoreToLy score = basicScore (concat $ map (staffFromProgress.staffToProgress) score)
+scoreToLy score = basicScore (concat $ map (staffFromProgress.applySlursToStaff.staffToProgress) score)
 
-staffInstruments :: [[[NoteInProgress]]] -> [Instrument]
+staffInstruments :: StaffInProgress -> [Instrument]
 staffInstruments = let
     fromNoteInProgress (n,_) = case n^.pitch of
         OneLy (_,_,i) -> [i]
@@ -228,16 +343,16 @@ staffInstruments = let
     fromStaffInProgress = concatMap fromPolyInProgress
     in catMaybes . nub . fromStaffInProgress
 
-staffToProgress :: Staff -> [[[NoteInProgress]]]
+staffToProgress :: Staff -> StaffInProgress
 staffToProgress = map polyToProgress
 
-staffFromProgress :: [[[NoteInProgress]]] -> String
+staffFromProgress :: StaffInProgress -> String
 staffFromProgress staff = basicStaff (staffInstruments staff) (concat $ intersperse " " $ map polyFromProgress staff)
 
-polyToProgress :: Polyphony -> [[NoteInProgress]]
+polyToProgress :: Polyphony -> PolyInProgress
 polyToProgress = map linToProgress
 
-polyFromProgress :: [[NoteInProgress]] -> String
+polyFromProgress :: PolyInProgress -> String
 polyFromProgress [] = error "empty polyphony"
 polyFromProgress [lin] = linFromProgress lin
 polyFromProgress lins = " << " ++ (concat $ intersperse "\\\\" $ map (" { "++) $ map (++" } ") $ map linFromProgress lins) ++ ">> "
@@ -254,14 +369,14 @@ packChordsIntoMultiPitchNotes :: LinearNote -> (Note MultiPitchLy)
 packChordsIntoMultiPitchNotes (UniNote n) = n & pitch .~ OneLy (n^.pitch,n^.acc,n^.inst)
 packChordsIntoMultiPitchNotes (ChordR ns) = (head ns) & pitch .~ ManyLy (zip3 (map (^.pitch) ns) (map (^.acc) ns) (map (^.inst) ns))
 
-linToProgress :: Linear -> [NoteInProgress]
+linToProgress :: Linear -> LinearInProgress
 linToProgress lin = timePitchSort lin 
     & map (& val %~ packChordsIntoMultiPitchNotes)
     & map startRenderingNote
     & map renderNoteBodyInStaff
     & map renderNoteItems
 
-linFromProgress :: [NoteInProgress] -> String
+linFromProgress :: LinearInProgress -> String
 linFromProgress lin = lin
     & map extractRenderedNote
     & intersperse " "

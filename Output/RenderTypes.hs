@@ -28,3 +28,7 @@ data MultiPitchLy = OneLy (Ly,Maybe Accidental,Maybe Instrument)
     deriving (Show)
 
 type NoteInProgress = (Note MultiPitchLy, WrittenNote)
+type LinearInProgress = [NoteInProgress]
+type PolyInProgress = [LinearInProgress]
+type StaffInProgress = [PolyInProgress]
+type ScoreInProgress = [StaffInProgress]
