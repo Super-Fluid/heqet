@@ -64,23 +64,8 @@ renderOct oct
     | oct < 0 = replicate (- oct) ','
     | otherwise = replicate (oct) '\''
 
-data WrittenNote = WrittenNote { 
-      _preceeding :: [String]
-    , _body :: String
-    , _duration :: Duration
-    , _noteItems :: [String]
-    , _following :: [String]
-    }
-    deriving (Show)
-makeLenses ''WrittenNote
-
-data MultiPitchLy = OneLy (Ly,Maybe Accidental) | ManyLy [(Ly,Maybe Accidental)]
-    deriving (Show)
-
-type NoteInProgress = (Note MultiPitchLy, WrittenNote)
-
 startRenderingNote :: InTime (Note MultiPitchLy) -> NoteInProgress
-startRenderingNote it = (it^.val, WrittenNote [] "" (it^.dur) [] [])
+startRenderingNote it = (it^.val, WrittenNote [] "" (it^.dur) [] []) -- TODO: INSTR{UMENTS
 
 renderNoteBodyInStaff :: NoteInProgress -> NoteInProgress
 renderNoteBodyInStaff (n, w) = let
@@ -92,8 +77,8 @@ renderNoteBodyInStaff (n, w) = let
         ManyLy lys -> (getMarkupFromManyLys lys)++(w^.noteItems)
     in (n, w & noteItems .~ nis' & body .~ body')
 
-renderOneNoteBodyInStaff :: (Note MultiPitchLy) -> (Ly,Maybe Accidental) -> String
-renderOneNoteBodyInStaff n (ly,a) = case ly of
+renderOneNoteBodyInStaff :: (Note MultiPitchLy) -> (Ly,Maybe Accidental,Maybe Instrument) -> String
+renderOneNoteBodyInStaff n (ly,a,_) = case ly of
     Pitch p -> renderPitch' p a
     Perc s -> xNote n
     Rest -> "r"
@@ -101,14 +86,14 @@ renderOneNoteBodyInStaff n (ly,a) = case ly of
     Lyric s -> xNote n
     Grace mus -> "\\grace {" ++ allRendering mus ++ "}"
 
-renderManyNoteBodiesInStaff :: (Note MultiPitchLy) -> [(Ly,Maybe Accidental)] -> String
+renderManyNoteBodiesInStaff :: (Note MultiPitchLy) -> [(Ly,Maybe Accidental,Maybe Instrument)] -> String
 renderManyNoteBodiesInStaff n lys = "< " ++ (concat $ intersperse " " $ map (renderOneNoteBodyInStaff n) lys) ++ " >"
 
 {-
 Get markup to render Ly types that we don't have a better way to render.
 -}
-getMarkupFromOneLy :: (Ly,Maybe Accidental) -> [String]
-getMarkupFromOneLy (ly,_) = case ly of
+getMarkupFromOneLy :: (Ly,Maybe Accidental,Maybe Instrument) -> [String]
+getMarkupFromOneLy (ly,_,_) = case ly of
     Pitch _ -> []
     Perc s -> [markupText s]
     Rest -> []
@@ -116,7 +101,7 @@ getMarkupFromOneLy (ly,_) = case ly of
     Lyric s -> [markupText s]
     Grace mus -> []
 
-getMarkupFromManyLys :: [(Ly,Maybe Accidental)] -> [String]
+getMarkupFromManyLys :: [(Ly,Maybe Accidental,Maybe Instrument)] -> [String]
 getMarkupFromManyLys = concat . map getMarkupFromOneLy
 
 renderNoteItems :: NoteInProgress -> NoteInProgress
@@ -231,24 +216,31 @@ findPolys lin = reverse $ foldl f [] (timePitchSort lin) where
     conflictsWith it1 it2 = it1^.t < (it2^.t + it2^.dur) && it2^.t < (it1^.t + it1^.dur)
 
 scoreToLy :: Stage1 -> String
-scoreToLy score = basicScore (concat $ map staffToLy score)
+scoreToLy score = basicScore (concat $ map (staffFromProgress.staffToProgress) score)
 
-staffInstruments :: Staff -> [Instrument]
+staffInstruments :: [[[NoteInProgress]]] -> [Instrument]
 staffInstruments = let
-    fromLinearNote (UniNote n) = [n^.inst]
-    fromLinearNote (ChordR ns) = map (^.inst) ns
-    fromLinear = concatMap (\it -> fromLinearNote (it^.val))
-    fromPoly = concatMap fromLinear
-    fromStaff = concatMap fromPoly
-    in catMaybes . nub . fromStaff
+    fromNoteInProgress (n,_) = case n^.pitch of
+        OneLy (_,_,i) -> [i]
+        ManyLy ly_a_is -> map (^._3) ly_a_is
+    fromLinearInProgress = concatMap fromNoteInProgress
+    fromPolyInProgress = concatMap fromLinearInProgress
+    fromStaffInProgress = concatMap fromPolyInProgress
+    in catMaybes . nub . fromStaffInProgress
 
-staffToLy :: Staff -> String
-staffToLy staff = basicStaff (staffInstruments staff) (concat $ intersperse " " $ map polyToLy staff)
+staffToProgress :: Staff -> [[[NoteInProgress]]]
+staffToProgress = map polyToProgress
 
-polyToLy :: Polyphony -> String
-polyToLy [] = error "empty polyphony"
-polyToLy [lin] = linToLy lin
-polyToLy lins = " << " ++ (concat $ intersperse "\\\\" $ map (" { "++) $ map (++" } ") $ map linToLy lins) ++ ">> "
+staffFromProgress :: [[[NoteInProgress]]] -> String
+staffFromProgress staff = basicStaff (staffInstruments staff) (concat $ intersperse " " $ map polyFromProgress staff)
+
+polyToProgress :: Polyphony -> [[NoteInProgress]]
+polyToProgress = map linToProgress
+
+polyFromProgress :: [[NoteInProgress]] -> String
+polyFromProgress [] = error "empty polyphony"
+polyFromProgress [lin] = linFromProgress lin
+polyFromProgress lins = " << " ++ (concat $ intersperse "\\\\" $ map (" { "++) $ map (++" } ") $ map linFromProgress lins) ++ ">> "
 
 {-
 Pack the multiple notes in a ChordR into
@@ -259,16 +251,18 @@ the same except for the pitch, so we only need to look
 at the first one.
 -}
 packChordsIntoMultiPitchNotes :: LinearNote -> (Note MultiPitchLy)
-packChordsIntoMultiPitchNotes (UniNote n) = n & pitch .~ OneLy (n^.pitch,n^.acc)
-packChordsIntoMultiPitchNotes (ChordR ns) = (head ns) & pitch .~ ManyLy (zip (map (^.pitch) ns) (map (^.acc) ns))
+packChordsIntoMultiPitchNotes (UniNote n) = n & pitch .~ OneLy (n^.pitch,n^.acc,n^.inst)
+packChordsIntoMultiPitchNotes (ChordR ns) = (head ns) & pitch .~ ManyLy (zip3 (map (^.pitch) ns) (map (^.acc) ns) (map (^.inst) ns))
 
-linToLy :: Linear -> String
-linToLy lin = timePitchSort lin 
+linToProgress :: Linear -> [NoteInProgress]
+linToProgress lin = timePitchSort lin 
     & map (& val %~ packChordsIntoMultiPitchNotes)
     & map startRenderingNote
     & map renderNoteBodyInStaff
     & map renderNoteItems
-    & applySlurs
+
+linFromProgress :: [NoteInProgress] -> String
+linFromProgress lin = lin
     & map extractRenderedNote
     & intersperse " "
     & concat
