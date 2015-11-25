@@ -16,9 +16,8 @@ import Data.Tuple
 import Data.List
 import Control.Applicative
 import Data.Monoid
+import Data.Ord
 import Safe
-
-import Debug.Trace
 
 toLy (note,dur) = renderPitch (note^.pitch) (note^.acc) ++ renderDuration (dur)
 
@@ -330,6 +329,64 @@ findPolys lin = reverse $ foldl f [] (timePitchSort lin) where
     checkLineFit it line = all (not . conflictsWith it) line
     conflictsWith it1 it2 = it1^.t < (it2^.t + it2^.dur) && it2^.t < (it1^.t + it1^.dur)
 
+{-
+Put voices in pitch order within each poly,
+for a lilypond notion of pitch order (odd on top, even on bottom,
+for something like 1,3,5,2,4,6. Not sure if that's the right order
+of the evens..
+-}
+sortPoly :: Polyphony -> Polyphony
+sortPoly lins = let
+    sorted = sortBy (comparing heightOfLinear) lins
+    indexed = sorted `zip` [1..] -- voices are 1-indexed
+    odds  = map (^._1) $ filter (\(_,i) -> odd  i) indexed
+    evens = map (^._1) $ filter (\(_,i) -> even i) indexed
+    in reverse $ odds ++ evens
+    -- For some reason the poly will be in the wrong order if we don't reverse it...
+
+{- compute the "average pitch" of
+a Linear, ignoring things that don't make 
+sense to include, like lyrics.
+-}
+heightOfLinear :: Linear -> Double
+heightOfLinear lin = let
+    info = map heightAndLength lin
+    summedHeight = sum $ map (^._1) info
+    summedDuration = sum $ map (^._2) info
+    in case summedDuration of
+        0 -> 0 -- we avoid div by 0, but the best result to give is not clear
+        _ -> summedHeight / (fromRational summedDuration)
+
+{-
+"height" and duration of an InTime LinearNote
+with the convention that a chord counts once for each
+pitch and that some kinds of Lys are ignored.
+-}
+heightAndLength :: InTime LinearNote -> (Double,Rational)
+heightAndLength it = let
+    lys = case it^.val of
+        UniNote n -> [n^.pitch]
+        ChordR ns -> map (^.pitch) ns
+    lyInfo = map heightAndLengthPossibilityOfLy lys
+    summedHeight = sum $ map (^._1) lyInfo
+    numberOfAverageable = length $ filter (^._2) lyInfo
+    in (summedHeight, (fromIntegral numberOfAverageable)*it^.dur)
+
+{-
+If a Ly is able to be averaged to get the "pitch" of
+a phrase, we return its pitch (or other measure of height)
+and True. If it's not possible, we return False and a
+height of 0. The reason we must return the boolean is
+so that we know not to include the duration of the note
+containing this Ly in the sum of durations we use to 
+calculate the average.
+-}
+heightAndLengthPossibilityOfLy :: Ly -> (Double,Bool)
+heightAndLengthPossibilityOfLy ly = case ly2num ly of
+    Nothing -> (0,False)
+    Just 0 -> (0,False)
+    Just x -> (x,True)
+
 scoreToLy :: Stage1 -> String
 scoreToLy score = basicScore (concat $ map (staffFromProgress.applySlursToStaff.staffToProgress) score)
 
@@ -388,6 +445,7 @@ allRendering mus = mus
     & map combineChords
     & map timePitchSort
     & map findPolys
+    & (map.map) sortPoly -- puts voices in pitch order
     & (map.map.map) reverse -- put each Linear in order
     & (map.map) (filter (not.null)) -- remove empty Linears from each Polyphony
     & scoreToLy

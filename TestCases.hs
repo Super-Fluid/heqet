@@ -29,6 +29,13 @@ poly = [music| f1 << { c4 g, } \\ { e2 } >> <g, b>2 c1\fermata |]
         & inst .~ Just Instruments.melody
         )
 
+poly2 = [music| << { c2-. } \\ { e2 } >> |] 
+    & mapOverNotes (\x -> x
+        & clef .~ Just Treble
+        & line .~ Just "1"
+        & inst .~ Just Instruments.melody
+        )
+
 missingdur = [music| c1 d |] & mapOverNotes (\x -> x
     & clef .~ Just Treble
     & line .~ Just "1"
@@ -40,7 +47,7 @@ basstreble = [music| c2. d4 ef8 g c' d' ef'4 g' c''2 ef''4. c''16 r8 c8-> |] & m
     & inst .~ Just Instruments.horn
     )
 
-slur = [music| c''4.-( e''8-( g''2 << { e''4 e'' } \\ { c''4-( b' } >> <a' e''>1-( <c'' e''> |] & mapOverNotes (\x -> x
+slur = [music| c''4.-( e''8-( g''2 c''4.-( r4 e''8-( g''2 << { e''4 e'' } \\ { c''4-( b' } >> <a' e''>1-( <c'' e''> |] & mapOverNotes (\x -> x
     & line .~ Just "1"
     & inst .~ Just Instruments.violin
-    )
+    )-- \grace { c''16 }
