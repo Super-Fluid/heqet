@@ -186,11 +186,10 @@ applySlursToLinear enteringSlur existsSlurableFollowing lin =
     applySlursToLinear'h :: (Bool,LinearInProgress) -> LinearInProgress -> (Bool,LinearInProgress)
     applySlursToLinear'h (isInSlur,acc) [] = (False,[]) 
         -- False because a slur can't come out of a linear with no notes.
-    applySlursToLinear'h (isInSlur,acc) notes = let
-        note = head notes -- notes can't be empty because that's the previous pattern
+    applySlursToLinear'h (isInSlur,acc) (note:notes) = let
         existsSlurableNextNote = case notes of
-            (_:nextNote:_) -> canMultiPitchLyBeSlurredTo (nextNote^._1.pitch)
-            [_] -> existsSlurableFollowing 
+            (nextNote:_) -> canMultiPitchLyBeSlurredTo (nextNote^._1.pitch)
+            [] -> existsSlurableFollowing 
             -- second case: only one note remaining in
             -- this linear, so we have to use our given information about what
             -- comes after this.
