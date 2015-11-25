@@ -18,6 +18,8 @@ import Control.Applicative
 import Data.Monoid
 import Safe
 
+import Debug.Trace
+
 toLy (note,dur) = renderPitch (note^.pitch) (note^.acc) ++ renderDuration (dur)
 
 renderPitch :: Ly -> (Maybe Accidental) -> String
@@ -184,8 +186,7 @@ applySlursToLinear :: Bool -> Bool -> LinearInProgress -> (Bool, LinearInProgres
 applySlursToLinear enteringSlur existsSlurableFollowing lin =
     applySlursToLinear'h (enteringSlur,[]) lin where
     applySlursToLinear'h :: (Bool,LinearInProgress) -> LinearInProgress -> (Bool,LinearInProgress)
-    applySlursToLinear'h (isInSlur,acc) [] = (False,[]) 
-        -- False because a slur can't come out of a linear with no notes.
+    applySlursToLinear'h (isInSlur,acc) [] = (isInSlur,[])
     applySlursToLinear'h (isInSlur,acc) (note:notes) = let
         existsSlurableNextNote = case notes of
             (nextNote:_) -> canMultiPitchLyBeSlurredTo (nextNote^._1.pitch)
@@ -226,7 +227,7 @@ in slur?    T          |F )         F )
 applySlurToNote :: Bool -> Bool -> Bool -> (Bool,(NoteInProgress -> NoteInProgress))
 applySlurToNote isInSlur existsSlurableNextNote thisNoteIsSlurred = let
     endSlur = (& _2.noteItems %~ (")":))
-    beginSlur = (& _2.noteItems %~ (")":))
+    beginSlur = (& _2.noteItems %~ ("(":))
     tenuto = (& _2.noteItems %~ ("--":))
             {- If a note is supposed to be slurred but there's nothing for
             it to be slurred to, we mark it as tenuto instead. There's no
