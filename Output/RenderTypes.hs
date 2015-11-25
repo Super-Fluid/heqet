@@ -15,6 +15,7 @@ type Stage1 = [Staff]
 
 data WrittenNote = WrittenNote { 
       _preceeding :: [String]
+    , _preceedingNoteItems :: [String]
     , _body :: String
     , _duration :: Duration
     , _noteItems :: [String]

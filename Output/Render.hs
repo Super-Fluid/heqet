@@ -66,7 +66,15 @@ renderOct oct
     | otherwise = replicate (oct) '\''
 
 startRenderingNote :: InTime (Note MultiPitchLy) -> NoteInProgress
-startRenderingNote it = (it^.val, WrittenNote [] "" (it^.dur) [] [])
+startRenderingNote it = (it^.val, WrittenNote [] [] "" (it^.dur) [] [])
+
+renderMusicErrors :: NoteInProgress -> NoteInProgress
+renderMusicErrors (n,w) = let
+    maybeMakeRed = case n^.errors of
+        [] -> id
+        _ -> (errorRedNotehead:)
+    markupErrors = map markupText (n^.errors)
+    in (n, w & noteItems %~ (markupErrors++) & preceedingNoteItems %~ maybeMakeRed)
 
 renderNoteBodyInStaff :: NoteInProgress -> NoteInProgress
 renderNoteBodyInStaff (n, w) = let
@@ -438,6 +446,7 @@ linToProgress lin = timePitchSort lin
     & map startRenderingNote
     & map renderNoteBodyInStaff
     & map renderNoteItems
+    & map renderMusicErrors
 
 linFromProgress :: LinearInProgress -> String
 linFromProgress lin = lin

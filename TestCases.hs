@@ -51,3 +51,8 @@ slur = [music| c''4.-( e''8-( g''2 c''4.-( r4 e''8-( g''2 << { e''4 e'' } \\ { c
     & line .~ Just "1"
     & inst .~ Just Instruments.violin
     )-- \grace { c''16 }
+
+badname = [music| c4 foo2 d4 |] & mapOverNotes (\x -> x
+    & line .~ Just "1"
+    & inst .~ Just Instruments.cello
+    )

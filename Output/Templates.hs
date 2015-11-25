@@ -36,6 +36,9 @@ shortInstrumentName = "|] ++ (concat $ intersperse " & " $ map (^.shortName) ins
 errorNoAccidental :: String
 errorNoAccidental = [r|^\\markup{\\sharp\\flat}|]
 
+errorRedNotehead :: String
+errorRedNotehead = [r| \tweak #'color #red |]
+
 -- etc
 markupText :: String -> String
 markupText s = "^\\markup{"++s++"}"
