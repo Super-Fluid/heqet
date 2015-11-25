@@ -29,7 +29,7 @@ poly = [music| f1 << { c4 g, } \\ { e2 } >> <g, b>2 c1\fermata |]
         & inst .~ Just Instruments.melody
         )
 
-poly2 = [music| << { c2-. } \\ { e2 } >> |] 
+poly2 = [music| << { e2 c4} \\ { e4 c2} >> |] 
     & mapOverNotes (\x -> x
         & clef .~ Just Treble
         & line .~ Just "1"

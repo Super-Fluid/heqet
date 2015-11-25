@@ -337,12 +337,11 @@ of the evens..
 -}
 sortPoly :: Polyphony -> Polyphony
 sortPoly lins = let
-    sorted = sortBy (comparing heightOfLinear) lins
+    sorted = reverse $ sortBy (comparing heightOfLinear) lins -- reverse so high to low
     indexed = sorted `zip` [1..] -- voices are 1-indexed
     odds  = map (^._1) $ filter (\(_,i) -> odd  i) indexed
     evens = map (^._1) $ filter (\(_,i) -> even i) indexed
-    in reverse $ odds ++ evens
-    -- For some reason the poly will be in the wrong order if we don't reverse it...
+    in odds ++ evens
 
 {- compute the "average pitch" of
 a Linear, ignoring things that don't make 
@@ -361,6 +360,13 @@ heightOfLinear lin = let
 "height" and duration of an InTime LinearNote
 with the convention that a chord counts once for each
 pitch and that some kinds of Lys are ignored.
+
+The height is multiplied by the duration of this note,
+which is the duration of every pitch in this note, so 
+that a long high note counts more than a short one.
+
+It may turn out better to just count the number of notes
+or to count a chord as a single note...testing required.
 -}
 heightAndLength :: InTime LinearNote -> (Double,Rational)
 heightAndLength it = let
@@ -370,7 +376,7 @@ heightAndLength it = let
     lyInfo = map heightAndLengthPossibilityOfLy lys
     summedHeight = sum $ map (^._1) lyInfo
     numberOfAverageable = length $ filter (^._2) lyInfo
-    in (summedHeight, (fromIntegral numberOfAverageable)*it^.dur)
+    in (summedHeight*(fromRational $ it^.dur), (fromIntegral numberOfAverageable)*it^.dur)
 
 {-
 If a Ly is able to be averaged to get the "pitch" of
