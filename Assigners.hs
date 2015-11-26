@@ -4,6 +4,7 @@ import Types
 import List
 import Tools
 import Input.English
+import LyInstances
 
 import Control.Lens
 import Data.List

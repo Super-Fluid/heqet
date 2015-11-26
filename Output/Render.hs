@@ -9,6 +9,7 @@ import Output.RenderTypes
 import List
 import qualified Output.LilypondSettings
 import qualified Instruments
+import LyInstances
 
 import Control.Lens
 import Data.Maybe
@@ -287,9 +288,6 @@ xNote n = let
         Just Bass    -> "d"
         _            -> "c'"
     in "\\xNote "++fakePitch
-
-renderPitch' :: Pitch -> (Maybe Accidental) -> String
-renderPitch' p acc = renderPitchAcc (p^.pc) acc ++ renderOct (p^.oct)
 
 toStage0 :: Music -> [Music]
 toStage0 mus = (allVoices mus) & map (\v -> mus^.ofLine v)

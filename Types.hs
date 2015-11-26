@@ -1,8 +1,12 @@
-{-# LANGUAGE TemplateHaskell, DeriveFunctor #-}
+{-# LANGUAGE TemplateHaskell
+, DeriveFunctor
+, ExistentialQuantification
+, DeriveDataTypeable #-}
 
 module Types where
 
 import Control.Lens
+import Data.Typeable
 
 data PitchClass = C | Cs | D | Ds | E | F | Fs | G | Gs | A | As | B
     deriving (Show, Eq, Ord, Enum, Bounded, Read)
@@ -70,12 +74,20 @@ type Key = (PitchClass, Mode)
 data Mode = MajorM | MinorM -- | MajorBlues | MinorBlues | Dorian | Lydian | etc
     deriving (Eq, Show, Read)
 
+data Meter = Meter Int Int
+    deriving (Show,Read,Eq)
+data Meter' = Subs [SubMeter]
+    deriving (Show,Read)
+data SubMeter = SubMeter [Int] Int
+    deriving (Show,Read)
+
 instance Show Instrument where
     show ins = "<Instrument " ++ (_name ins) ++ ">"
 
 instance Eq Instrument where
     i == j = (_name i) == (_name j)
 
+data Note' = forall a. Ly'' a => MkNote { _getnote :: (Note a) }
 data Note a = Note { 
       _pitch :: a
     , _acc :: Maybe Accidental
@@ -119,6 +131,37 @@ emptyNote = Note {
 data Ly = Pitch Pitch | Rest | Perc Perc | Effect | Lyric Lyric | Grace Music
     deriving (Eq,Show)
 
+class Ly'' a where
+    renderInStaff :: Note' -> a -> String
+    getMarkup :: a -> [String]
+    slurrable :: a -> Bool
+    chordable :: a -> Bool
+    pitchHeight :: a -> Maybe Double
+    comparable :: a -> Bool
+
+data LyPitch = LyPitch Pitch
+    deriving (Show,Read,Typeable)
+data LyRest = LyRest
+    deriving (Show,Read,Typeable)
+data LyPerc = LyPerc Perc
+    deriving (Show,Read,Typeable)
+data LyEffect = LyEffect
+    deriving (Show,Read,Typeable)
+data LyLyric = LyLyric Lyric
+    deriving (Show,Read,Typeable)
+data LyGrace = LyGrace Music
+    deriving (Show,     Typeable)
+data LyMeasureEvent = LyMeasureEvent
+    deriving (Show,Read,Typeable)
+data LyBeatEvent = LyBeatEvent
+    deriving (Show,Read,Typeable)
+data LyKeyEvent = LyKeyEvent Key
+    deriving (Show,Read,Typeable)
+data LyClefEvent = LyClefEvent Clef
+    deriving (Show,Read,Typeable)
+data LyMeterEvent = LyMeterEvent Meter
+    deriving (Show,Read,Typeable)
+
 type MusicOf a = [(InTime (Note a))] -- Invariant: must be sorted chronologically
 type Music = MusicOf Ly
 
@@ -133,3 +176,4 @@ makeLenses ''ExprCommand
 makeLenses ''Pitch
 makeLenses ''Note
 makeLenses ''Instrument
+makeLenses ''Note'
