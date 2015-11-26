@@ -298,7 +298,14 @@ isChordable :: InTime (Note Ly) -> InTime (Note Ly) -> Bool
 isChordable it1 it2 = (it1^.dur == it2^.dur) && (it1^.t == it2^.t) &&
     (it1^.val.isSlurred == it2^.val.isSlurred) &&
     (it1^.val.isTied == it2^.val.isTied) &&
-    (it1^.val.artics == it2^.val.artics)
+    (it1^.val.artics == it2^.val.artics) &&
+    isLyChordable (it1^.val.pitch) &&
+    isLyChordable (it2^.val.pitch)
+
+isLyChordable :: Ly -> Bool
+isLyChordable (Pitch _) = True
+isLyChordable (Perc _) = True
+isLyChordable _ = False
 
 formChord :: [InTime (Note Ly)] -> InTime LinearNote
 formChord [it] = it & val .~ UniNote (it^.val)
