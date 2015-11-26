@@ -471,7 +471,7 @@ the music is written in.
 lookupNoteName :: [(String,(PitchClass,Accidental))] -> Pitch3 -> Pitch5
 lookupNoteName _ (NoteName3 "r" _) = Rest5
 lookupNoteName table (NoteName3 base oct) = case (lookup base table) of
-        Nothing -> Error5 $ "unknown note name \""++base++"\"."
+        Nothing -> Error5 $ "unknown note name '"++base++"'."
         Just (pc, acc) -> RegularNote pc (getOct oct) 0 (Just acc) where
             getOct "" = 0
             getOct s  = (length s) * (case (head s) of '\'' -> 1; ',' -> -1)

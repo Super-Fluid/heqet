@@ -126,12 +126,11 @@ renderNoteItems (n,w) = let
     endExpr = map (^.end) (n^.exprCommands)
     beginNDExpr = map (^.begin) (n^.nonDistCommands)
     endNDExpr = map (^.end) (n^.nonDistCommands)
-    markedErrors = map markupText $ n^.errors
     articulations = map renderArt $ n^.artics
     w' = w
         & preceeding .~ beginExpr ++ beginNDExpr
         & following .~ endExpr ++ endNDExpr
-        & noteItems .~ (n^.noteCommands) ++ articulations ++ markedErrors
+        & noteItems .~ (n^.noteCommands) ++ articulations
     in (n,w')
 
 canLinearInProgressBeSlurredTo :: LinearInProgress -> Bool
