@@ -19,13 +19,6 @@ import Data.Monoid
 import Data.Ord
 import Safe
 
-toLy (note,dur) = renderPitch (note^.pitch) (note^.acc) ++ renderDuration (dur)
-
-renderPitch :: Ly -> (Maybe Accidental) -> String
-renderPitch (Pitch p) acc = renderPitchAcc (p^.pc) acc ++ renderOct (p^.oct)
-renderPitch Rest _ = "r"
-renderPitch (Perc p) _ = "c"
-
 renderPitchAcc :: PitchClass -> (Maybe Accidental) -> String
 renderPitchAcc pc (Just acc) = fromJustNote "renderPitchAcc (with acc)" $ lookup (pc,acc) (map swap Tables.en)
 renderPitchAcc pc Nothing = fromJustNote "renderPitchAcc (no acc)" $ lookup pc (map (\((p,a),s) -> (p,s)) (map swap Tables.en))
@@ -92,7 +85,7 @@ renderNoteBodyInStaff (n, w) = let
 
 renderOneNoteBodyInStaff :: (Note MultiPitchLy) -> (Ly,Maybe Accidental,Maybe Instrument) -> String
 renderOneNoteBodyInStaff n (ly,a,_) = case ly of
-    Pitch p -> renderPitch' p a
+    Pitch p -> renderPitchAcc (p^.pc) a ++ renderOct (p^.oct)
     Perc s -> xNote n
     Rest -> "r"
     Effect -> xNote n
