@@ -54,6 +54,27 @@
 
 \end{subsection}
 
+\begin{subsection}{Differences from Lilypond input}
+There are several differences between the Heqet note-input domain-specific language and Lilypond input, for a variety of reasons. 
+\begin{itemize}
+\item You can enter notes with any rational duration with the \verb+\d+ syntax, for example \verb+c\d 4/5+ to make a note with a duration of $4/5$ of a WHAT. You can omit the denominator if it's $1$. This is currently the only way to enter notes of the durations needed for a tuplet. 
+
+\item \verb+hz+
+
+\item \verb+c-(+ for slurs (sorry)
+
+\item no clefs or time signatures
+
+\item functions, commands, \verb+\with+ . Lilypond parsing problems
+
+\item only absolute entry at the moment. 
+
+\item percussion notation \verb+\phh+ for hi-hat. When you enter notes, you don't need to specify that they must be rendered in a DrumStaff. They should be automatically rendered well, although support for percussion is currently minimal.
+
+\item no way to manually write beams, as this is not something the musician should need to worry about.
+\end{itemize}
+\end{subsection}
+
 \begin{subsection}{Making a score}
 
 \end{subsection}
