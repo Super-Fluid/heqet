@@ -70,10 +70,11 @@ startRenderingNote it = (it^.val, WrittenNote [] [] "" (it^.dur) [] [] False)
 
 renderMusicErrors :: NoteInProgress -> NoteInProgress
 renderMusicErrors (n,w) = let
+    errorText s = "\\with-color #red { " ++ s ++ " } "
     maybeMakeRed = case n^.errors of
         [] -> id
         _ -> (errorRedNotehead:)
-    markupErrors = map markupText (n^.errors)
+    markupErrors = map markupText $ map errorText (n^.errors)
     in (n, w & noteItems %~ (markupErrors++) & preceedingNoteItems %~ maybeMakeRed)
 
 renderNoteBodyInStaff :: NoteInProgress -> NoteInProgress
