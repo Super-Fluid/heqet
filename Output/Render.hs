@@ -66,7 +66,7 @@ renderOct oct
     | otherwise = replicate (oct) '\''
 
 startRenderingNote :: InTime (Note MultiPitchLy) -> NoteInProgress
-startRenderingNote it = (it^.val, WrittenNote [] [] "" (it^.dur) [] [])
+startRenderingNote it = (it^.val, WrittenNote [] [] "" (it^.dur) [] [] False)
 
 renderMusicErrors :: NoteInProgress -> NoteInProgress
 renderMusicErrors (n,w) = let
@@ -84,7 +84,10 @@ renderNoteBodyInStaff (n, w) = let
     nis' = case n^.pitch of
         OneLy ly -> (getMarkupFromOneLy ly)++(w^.noteItems)
         ManyLy lys -> (getMarkupFromManyLys lys)++(w^.noteItems)
-    in (n, w & noteItems .~ nis' & body .~ body')
+    grace = case n^.pitch of
+        OneLy x -> isGraceNote (x^._1)
+        ManyLy _ -> False -- Grace notes are not auto-chordable
+    in (n, w & noteItems .~ nis' & body .~ body' & graceNoteKludge .~ grace)
 
 renderOneNoteBodyInStaff :: (Note MultiPitchLy) -> (Ly,Maybe Accidental,Maybe Instrument) -> String
 renderOneNoteBodyInStaff n (ly,a,_) = case ly of
@@ -93,7 +96,11 @@ renderOneNoteBodyInStaff n (ly,a,_) = case ly of
     Rest -> "r"
     Effect -> xNote n
     Lyric s -> xNote n
-    Grace mus -> "\\grace {" ++ allRendering mus ++ "}"
+    Grace mus -> "\\grace {" ++ allRenderingForGrace n mus ++ "}"
+
+isGraceNote :: Ly -> Bool
+isGraceNote (Grace _) = True
+isGraceNote _ = False
 
 renderManyNoteBodiesInStaff :: (Note MultiPitchLy) -> [(Ly,Maybe Accidental,Maybe Instrument)] -> String
 renderManyNoteBodiesInStaff n lys = "< " ++ (concat $ intersperse " " $ map (renderOneNoteBodyInStaff n) lys) ++ " >"
@@ -147,7 +154,7 @@ canBeSlurredTo Rest = False
 canBeSlurredTo (Perc _) = True
 canBeSlurredTo Effect = True
 canBeSlurredTo (Lyric _) = True
-canBeSlurredTo (Grace _) = True
+canBeSlurredTo (Grace _) = False
 
 {- 
 We "apply" the slurs to a staff (a StaffInProgress), meaning 
@@ -267,11 +274,14 @@ renderInStaff mus = concat $ intersperse " " $ map f mus where
         & extractRenderedNote
 
 extractRenderedNote :: NoteInProgress -> String
-extractRenderedNote (n,w) = 
-    (concat $ w^.preceeding)
+extractRenderedNote (n,w) = let
+    nonGraceOnly :: String -> String
+    nonGraceOnly s = if not (w^.graceNoteKludge) then s else ""
+    in (concat $ w^.preceeding)
+    ++ nonGraceOnly (concat $ w^.preceedingNoteItems)
     ++ (w^.body)
-    ++ (renderDuration $ w^.duration)
-    ++ (concat $ w^.noteItems)
+    ++ nonGraceOnly (renderDuration $ w^.duration)
+    ++ nonGraceOnly (concat $ w^.noteItems)
     ++ (concat $ reverse $ w^.following)
 
 xNote :: Note MultiPitchLy -> String
@@ -471,6 +481,26 @@ allRendering mus = mus
     & (map.map.map) reverse -- put each Linear in order
     & (map.map) (filter (not.null)) -- remove empty Linears from each Polyphony
     & scoreToLy
+
+{- 
+Grace notes are like a Staff with no key changes or time signatures
+
+We assume that all the notes in a Grace belong with this voice.
+-}
+allRenderingForGrace :: Note MultiPitchLy -> Music -> String
+allRenderingForGrace n mus = mus
+    & combineChords
+    & timePitchSort
+    & findPolys
+    & (map) sortPoly -- puts voices in pitch order
+    & (map.map) reverse -- put each Linear in order
+    & (map) (filter (not.null)) -- remove empty Linears from each Polyphony
+    & map polyToProgress
+    & applySlursToStaff
+    & map polyFromProgress
+    & intersperse " " 
+    & concat
+
 
 writeScore = putStrLn . allRendering
 quickScore m = writeScore $ m & mapOverNotes (\x -> x

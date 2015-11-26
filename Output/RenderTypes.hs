@@ -20,6 +20,7 @@ data WrittenNote = WrittenNote {
     , _duration :: Duration
     , _noteItems :: [String]
     , _following :: [String]
+    , _graceNoteKludge :: Bool -- if true, don't write any duration or noteItems
     }
     deriving (Show)
 makeLenses ''WrittenNote
