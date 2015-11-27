@@ -14,8 +14,12 @@ import Control.Applicative ((<*))
 import Control.Lens
 import Data.List
 import Data.Maybe
+import Data.Typeable
+
 import Types hiding (chord)
 import Tables
+import Output.Render -- Just for the Renderable instances. 
+import LyInstances
 
 type PitchStr = String
 type DurStr = String
@@ -152,7 +156,7 @@ command = do
 leaf :: Parser Tree1
 leaf = do
     p <- pitch1
-    dur <- duration
+    dur <- Input.Parse.duration
     whiteSpace
     items <- noteItem `sepBy` whiteSpace
     whiteSpace
@@ -554,19 +558,19 @@ pitch5toPitch (ParallelY muss) = ParallelY (map pitch5toPitch muss)
 pitch5toPitch (SequentialY muss) = SequentialY (map pitch5toPitch muss)
 pitch5toPitch (GraceY mus) = GraceY (pitch5toPitch mus)
 pitch5toPitch (LeafY p d nis) = LeafY (f p) d (addAcc nis p ++ (errNi p)) where
-    f (RegularNote pc oct cents maybeAcc) = Pitch (MakePitch { _pc = pc, _oct = oct, _cents = cents })
-    f (Frequency5 pc oct cents) = Pitch $ MakePitch { _pc = pc, _oct = oct, _cents = cents }
-    f (Rest5) = Rest
-    f (Perc5 s) = Perc s
-    f Effect5 = Effect
-    f (Error5 s) = Effect
+    f (RegularNote pc oct cents maybeAcc) = Ly $ LyPitch (MakePitch { _pc = pc, _oct = oct, _cents = cents })
+    f (Frequency5 pc oct cents) = Ly $ LyPitch $ MakePitch { _pc = pc, _oct = oct, _cents = cents }
+    f (Rest5) = Ly $ LyRest
+    f (Perc5 s) = Ly $ LyPerc s
+    f Effect5 = Ly $ LyEffect
+    f (Error5 s) = Ly $ LyEffect
     errNi (Error5 s) = [Error2 s]
     errNi _ = []
     addAcc nis (RegularNote _ _ _ (Just acc)) = (PreferredAcc acc):nis
     addAcc nis _ = nis
 
 putInTime :: Tree6 -> [InTime (Ly,[NoteItem2])]
-putInTime (GraceY mus) = [InTime { _val = (Grace (placeAllNoteItems $ putInTime mus),[]), _dur = 0, _t = 0 }]
+putInTime (GraceY mus) = [InTime { _val = (Ly $ LyGrace (placeAllNoteItems $ putInTime mus),[]), _dur = 0, _t = 0 }]
 putInTime (LeafY ly d nis) = [InTime { _val = (ly,nis), _dur = d, _t = 0 }]
 putInTime (ParallelY muss) = sortBy (\n1 n2 -> (n1^.t) `compare` (n2^.t)) $ concat $ map putInTime muss
 putInTime (SequentialY muss) = fst $ foldl (\(accum, time) mus -> (accum++(shiftLate time $ putInTime mus),time + (durMu mus))) ([],0) muss where
@@ -591,8 +595,10 @@ placeNoteItems (ly, nis) = let baseNote = emptyNote { _pitch = ly }
         f bn (Error2 s)       = bn & errors %~ (s:)
         f bn (LongCommand s t) = bn & exprCommands %~ ((ExprCommand {_begin = s, _end = t}):)
         f bn (Cents2 n) = let
-            withcents (Pitch p) = Pitch (p & cents .~ n)
-            withcents other = other
+            lyPitchTypeRep = typeOf (LyPitch undefined)
+            withcents (Ly a) = case typeOf a of
+                lyPitchTypeRep -> let (LyPitch p) = fromJust $ cast a in Ly $ LyPitch (p & cents .~ n)
+                _ -> Ly a
             in bn & pitch %~ withcents
 
 isSimpleArt c = c `elem` ".->^+_|"
@@ -641,10 +647,11 @@ extractFirstPitch [] = error "empty quoted pitch"
 extractFirstPitch mus = let
     firstInTime = head mus
     firstLy = firstInTime ^. val.pitch
-    p = case firstLy of 
-        Pitch pp -> pp
-        _ -> error "note in quoted pitch without pitch"
-    in p
+    lyPitchTypeRep = typeOf (Ly (LyPitch undefined))
+    f (Ly a) = case typeOf a of
+        lyPitchTypeRep -> let (LyPitch pp) = fromJust $ cast a in pp
+        _ -> error "note in quoted pitch is not a LyPitch"
+    in f firstLy
 
 test :: QuasiQuoter
 test = QuasiQuoter { quoteExp = \s -> [| runParser musicParser () "" s >>= (Right . someTransformations en) |], quotePat = undefined, quoteType = undefined, quoteDec = undefined }

@@ -109,7 +109,7 @@ data Note a = Note {
 
 emptyNote :: Note Ly
 emptyNote = Note {
-      _pitch = Effect
+      _pitch = Ly LyNull
     , _acc = Nothing
     , _noteCommands = []
     , _exprCommands = []
@@ -127,17 +127,18 @@ emptyNote = Note {
     , _key = Nothing
     }
 
---data Ly = Pitch Pitch | Rest | Perc Perc | Effect | Lyric Lyric | Grace Music
---    deriving (Eq,Show)
-
 data Ly = forall a. (Renderable a, Playable a, Typeable a, Show a) => Ly a
+    deriving (Typeable)
+
+instance Show Ly where
+    show (Ly a) = "Ly " ++ show a
 
 class Renderable a where
-    renderInStaff :: (Note MultiPitchLy) -> (Ly a) -> String
-    getMarkup :: (Ly a) -> [String]
+    renderInStaff :: (Note MultiPitchLy) -> a -> String
+    getMarkup :: a -> [String]
 
 class Playable a where
-    info :: (Ly a) -> Maybe PlayInfo
+    info :: a -> Maybe PlayInfo
     -- What's playable? Notes are, key changes aren't.
     -- Can a slur pass through it? If so, then it's not playable.
 
@@ -178,6 +179,15 @@ data LyClefEvent = LyClefEvent Clef
     deriving (Show,Read,Typeable)
 data LyMeterEvent = LyMeterEvent Meter
     deriving (Show,Read,Typeable)
+data LyNull = LyNull
+    deriving (Show,Read,Typeable)
+
+instance Renderable LyNull where
+    renderInStaff _ _ = ""
+    getMarkup _ = []
+
+instance Playable LyNull where
+    info _ = Nothing
 
 type MusicOf a = [(InTime (Note a))] -- Invariant: must be sorted chronologically
 type Music = MusicOf Ly
@@ -208,7 +218,6 @@ data WrittenNote = WrittenNote {
     , _graceNoteKludge :: Bool -- if true, don't write any duration or noteItems
     }
     deriving (Show)
-makeLenses ''WrittenNote
 
 data MultiPitchLy = OneLy (Ly,Maybe Accidental,Maybe Instrument) 
     | ManyLy [(Ly,Maybe Accidental,Maybe Instrument)]
@@ -220,6 +229,7 @@ type PolyInProgress = [LinearInProgress]
 type StaffInProgress = [PolyInProgress]
 type ScoreInProgress = [StaffInProgress]
 
+makeLenses ''WrittenNote
 makeLenses ''InTime
 makeLenses ''ExprCommand
 makeLenses ''Pitch

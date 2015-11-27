@@ -7,7 +7,6 @@ import Output.Templates
 import Tools
 import List
 import qualified Output.LilypondSettings
-import qualified Instruments
 import LyInstances
 
 import Control.Lens
@@ -531,10 +530,3 @@ allRenderingForGrace n mus = mus
     & map polyFromProgress
     & intersperse " " 
     & concat
-
-
-writeScore = putStrLn . allRendering
-quickScore m = writeScore $ m & mapOverNotes (\x -> x
-    & line .~ Just "1"
-    & inst .~ Just Instruments.melody
-    )
