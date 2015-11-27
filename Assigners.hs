@@ -63,11 +63,11 @@ twoClefs lowClef highClef falling middle rising its = let musicInOrder = timeSor
             time = if newClef == currentClef then timeOfLastChange else it^.t
             in (newClef,time,(it & val.clef .~ newClef):acc)
 
-bassOrTreble = twoClefs Bass Treble [p| f |] [p| c' |] [p| g' |]
-bassAltTenorTreble = twoClefs Bass Tenor [p| f |] [p| c' |] [p| g' |] -- TODO: threeway split
-bassAltAltoTreble = twoClefs Bass Alto [p| f |] [p| c' |] [p| g' |] -- TODO: threeway split
-bassAltTreble = twoClefs Bass Treble [p| c' |] [p| c'' |] [p| c'' |]
-altoAltTreble = twoClefs Alto Treble [p| c' |] [p| b'' |] [p| b'' |]
+bassOrTreble = twoClefs Bass Treble [pp| f |] [pp| c' |] [pp| g' |]
+bassAltTenorTreble = twoClefs Bass Tenor [pp| f |] [pp| c' |] [pp| g' |] -- TODO: threeway split
+bassAltAltoTreble = twoClefs Bass Alto [pp| f |] [pp| c' |] [pp| g' |] -- TODO: threeway split
+bassAltTreble = twoClefs Bass Treble [pp| c' |] [pp| c'' |] [pp| c'' |]
+altoAltTreble = twoClefs Alto Treble [pp| c' |] [pp| b'' |] [pp| b'' |]
 
 -- these functions are for comparing a Ly to a Pitch, with the 
 -- property that a Ly that is not a Pitch should always be 'inside'
