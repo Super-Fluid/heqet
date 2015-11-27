@@ -20,6 +20,57 @@ import Data.Monoid
 import Data.Ord
 import Safe
 
+instance Renderable LyPitch where
+    renderInStaff n (LyPitch p) = renderPitchAcc (p^.pc) (n^.getnote.acc) ++ renderOct (p^.oct)
+    getMarkup _ = []
+
+instance Renderable LyRest where
+    renderInStaff _ _ = "r"
+    getMarkup _ = []
+
+instance Renderable LyPerc where
+    renderInStaff n _ = xNote n
+    getMarkup (LyPerc s) = [markupText s]
+
+instance Renderable LyEffect where
+    renderInStaff n _ = xNote n
+    getMarkup _ = []
+
+instance Renderable LyLyric where
+    renderInStaff n _ = xNote n
+    getMarkup (LyLyric s) = [markupText s]
+
+instance Renderable LyGrace where
+    renderInStaff n (LyGrace mus) = "\\grace {" ++ allRenderingForGrace n mus ++ "}"
+    getMarkup _ = []
+
+instance Renderable LyMeasureEvent where
+    renderInStaff _ _ = " | "
+    getMarkup _ = []
+
+instance Renderable LyBeatEvent where
+    renderInStaff _ _ = ""
+    getMarkup _ = []
+
+instance Renderable LyBeatEvent where
+    renderInStaff _ _ = ""
+    getMarkup _ = []
+
+instance Renderable LyClefEvent where
+    renderInStaff _ (LyClefEvent c) = "\\clef " ++ clef ++ " " where
+        clef = case c of
+            Treble -> "treble"
+            Alto -> "alto"
+            Tenor -> "tenor"
+            Bass -> "bass"
+            Treble8 -> "\"treble_8\""
+            CustomClef s -> s -- let's hope the user knows what they're doing
+    getMarkup _ = []
+
+instance Renderable LyMeterEvent where
+    renderInStaff _ (LyMeterEvent (Meter num denom)) = "\\time " ++ show num ++ "/" ++ show denom ++ " "
+    getMarkup _ = []
+
 renderPitchAcc :: PitchClass -> (Maybe Accidental) -> String
 renderPitchAcc pc (Just acc) = fromJustNote "renderPitchAcc (with acc)" $ lookup (pc,acc) (map swap Tables.en)
 renderPitchAcc pc Nothing = fromJustNote "renderPitchAcc (no acc)" $ lookup pc (map (\((p,a),s) -> (p,s)) (map swap Tables.en))

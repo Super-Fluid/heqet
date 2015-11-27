@@ -87,7 +87,8 @@ instance Show Instrument where
 instance Eq Instrument where
     i == j = (_name i) == (_name j)
 
-data Note' = forall a. Ly'' a => MkNote { _getnote :: (Note a) }
+data Ly' = forall a. (Renderable a, Playable a) => Ly' a
+
 data Note a = Note { 
       _pitch :: a
     , _acc :: Maybe Accidental
@@ -131,9 +132,11 @@ emptyNote = Note {
 data Ly = Pitch Pitch | Rest | Perc Perc | Effect | Lyric Lyric | Grace Music
     deriving (Eq,Show)
 
-class Ly'' a where
-    renderInStaff :: Note' -> a -> String
+class Renderable a where
+    renderInStaff :: (Note Ly) -> a -> String
     getMarkup :: a -> [String]
+
+class Playable a where
     slurrable :: a -> Bool
     chordable :: a -> Bool
     pitchHeight :: a -> Maybe Double -- for comparing. Not all Lys can be compared.
@@ -177,4 +180,3 @@ makeLenses ''ExprCommand
 makeLenses ''Pitch
 makeLenses ''Note
 makeLenses ''Instrument
-makeLenses ''Note'
