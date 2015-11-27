@@ -2,6 +2,10 @@ module Output.FastRender where
 
 import Output.Render
 import qualified Instruments
+import Types
+import Tools
+
+import Control.Lens
 
 {-
 This module is separate from Output.Render
