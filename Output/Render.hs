@@ -13,13 +13,14 @@ import Control.Lens
 import Data.Maybe
 import Data.Tuple
 import Data.List
+import Data.Typeable
 import Control.Applicative
 import Data.Monoid
 import Data.Ord
 import Safe
 
 instance Renderable LyPitch where
-    renderInStaff n (Ly (LyPitch p)) = renderPitchAcc (p^.pc) (n^.acc) ++ renderOct (p^.oct)
+    renderInStaff n (LyPitch p) = renderPitchAcc (p^.pc) (n^.acc) ++ renderOct (p^.oct)
     getMarkup _ = []
 
 instance Renderable LyRest where
@@ -39,7 +40,7 @@ instance Renderable LyLyric where
     getMarkup (LyLyric s) = [markupText s]
 
 instance Renderable LyGrace where
-    renderInStaff n (Ly (LyGrace mus)) = "\\grace {" ++ allRenderingForGrace n mus ++ "}"
+    renderInStaff n (LyGrace mus) = "\\grace {" ++ allRenderingForGrace n mus ++ "}"
     getMarkup _ = []
 
 instance Renderable LyMeasureEvent where
@@ -47,7 +48,7 @@ instance Renderable LyMeasureEvent where
     getMarkup _ = []
 
 instance Renderable LyKeyEvent where
-    renderInStaff _ (Ly (LyKeyEvent k)) = "\\key " ++ pitch ++ " " ++ mode ++ " " where
+    renderInStaff _ (LyKeyEvent k) = "\\key " ++ pitch ++ " " ++ mode ++ " " where
         pitch = "c"
         mode = "major"
     getMarkup _ = []
@@ -57,7 +58,7 @@ instance Renderable LyBeatEvent where
     getMarkup _ = []
 
 instance Renderable LyClefEvent where
-    renderInStaff _ (Ly (LyClefEvent c)) = "\\clef " ++ clef ++ " " where
+    renderInStaff _ (LyClefEvent c) = "\\clef " ++ clef ++ " " where
         clef = case c of
             Treble -> "treble"
             Alto -> "alto"
@@ -68,7 +69,7 @@ instance Renderable LyClefEvent where
     getMarkup _ = []
 
 instance Renderable LyMeterEvent where
-    renderInStaff _ (Ly (LyMeterEvent (Meter num denom))) = "\\time " ++ show num ++ "/" ++ show denom ++ " "
+    renderInStaff _ (LyMeterEvent (Meter num denom)) = "\\time " ++ show num ++ "/" ++ show denom ++ " "
     getMarkup _ = []
 
 renderPitchAcc :: PitchClass -> (Maybe Accidental) -> String
@@ -136,11 +137,14 @@ renderNoteBodyInStaff (n, w) = let
     in (n, w & noteItems .~ nis' & body .~ body' & graceNoteKludge .~ grace)
 
 renderOneNoteBodyInStaff :: (Note MultiPitchLy) -> (Ly,Maybe Accidental,Maybe Instrument) -> String
-renderOneNoteBodyInStaff n (ly,a,_) = renderInStaff n ly
+renderOneNoteBodyInStaff n (Ly ly,a,_) = renderInStaff n ly
 
 isGraceNote :: Ly -> Bool
-isGraceNote (Grace _) = True
-isGraceNote _ = False
+isGraceNote (Ly a) = let
+    lyGraceTypeRep = typeOf (LyGrace undefined)
+    in case typeOf a of
+        lyGraceTypeRep -> True
+        _ -> False
 
 renderManyNoteBodiesInStaff :: (Note MultiPitchLy) -> [(Ly,Maybe Accidental,Maybe Instrument)] -> String
 renderManyNoteBodiesInStaff n lys = "< " ++ (concat $ intersperse " " $ map (renderOneNoteBodyInStaff n) lys) ++ " >"
@@ -149,7 +153,7 @@ renderManyNoteBodiesInStaff n lys = "< " ++ (concat $ intersperse " " $ map (ren
 Get markup to render Ly types that we don't have a better way to render.
 -}
 getMarkupFromOneLy :: (Ly,Maybe Accidental,Maybe Instrument) -> [String]
-getMarkupFromOneLy (ly,_,_) = getMarkup ly
+getMarkupFromOneLy (Ly ly,_,_) = getMarkup ly
 
 getMarkupFromManyLys :: [(Ly,Maybe Accidental,Maybe Instrument)] -> [String]
 getMarkupFromManyLys = concat . map getMarkupFromOneLy
@@ -179,15 +183,12 @@ canMultiPitchLyBeSlurredTo (ManyLy xs) = let
     in any canBeSlurredTo lys
 
 {-
-This function will hopefully be integrated into the Ly class soon.
+Yay Playable typeclass
 -}
 canBeSlurredTo :: Ly -> Bool
-canBeSlurredTo (Pitch _) = True
-canBeSlurredTo Rest = False
-canBeSlurredTo (Perc _) = True
-canBeSlurredTo Effect = True
-canBeSlurredTo (Lyric _) = True
-canBeSlurredTo (Grace _) = False
+canBeSlurredTo (Ly a) = case info a of
+    Just i -> i^.slurrable
+    Nothing -> False -- we shouldn't really ask this, but let's go with False for now
 
 {- 
 We "apply" the slurs to a staff (a StaffInProgress), meaning 
@@ -343,9 +344,9 @@ isChordable it1 it2 = (it1^.dur == it2^.dur) && (it1^.t == it2^.t) &&
     isLyChordable (it2^.val.pitch)
 
 isLyChordable :: Ly -> Bool
-isLyChordable (Pitch _) = True
-isLyChordable (Perc _) = True
-isLyChordable _ = False
+isLyChordable (Ly a) = case info a of
+    Just i -> i^.chordable
+    Nothing -> False -- again, we shouldn't ever use this value...
 
 formChord :: [InTime (Note Ly)] -> InTime LinearNote
 formChord [it] = it & val .~ UniNote (it^.val)
@@ -443,10 +444,12 @@ containing this Ly in the sum of durations we use to
 calculate the average.
 -}
 heightAndLengthPossibilityOfLy :: Ly -> (Double,Bool)
-heightAndLengthPossibilityOfLy ly = case ly2num ly of
-    Nothing -> (0,False)
-    Just 0 -> (0,False)
-    Just x -> (x,True)
+heightAndLengthPossibilityOfLy (Ly ly) = case info ly of
+    Nothing -> (0,False) -- but probably should be "error"
+    Just i -> case i^.pitchHeight of
+        Nothing -> (0,False)
+        Just 0 -> (0,False)
+        Just x -> (x,True)
 
 scoreToLy :: Stage1 -> String
 scoreToLy score = basicScore (concat $ map (staffFromProgress.applySlursToStaff.staffToProgress) score)
