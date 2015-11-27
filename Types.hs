@@ -70,7 +70,7 @@ data Clef = Treble | Alto | Treble8 | Tenor | Bass | CustomClef String
 type Chord = (RelativePitchClass, ChordFlavor)
 data ChordFlavor = MajorC | MinorC | Diminished | Augmented | MajorMinor
     deriving (Eq, Show, Read)
-type Key = (PitchClass, Mode)
+type Key = (PitchClass, Mode, Maybe Accidental)
 data Mode = MajorM | MinorM -- | MajorBlues | MinorBlues | Dorian | Lydian | etc
     deriving (Eq, Show, Read)
 

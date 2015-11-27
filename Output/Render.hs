@@ -21,7 +21,7 @@ import Data.Ord
 import Safe
 
 instance Renderable LyPitch where
-    renderInStaff n (LyPitch p) = renderPitchAcc (p^.pc) (n^.getnote.acc) ++ renderOct (p^.oct)
+    renderInStaff n (LyPitch p) = renderPitchAcc (p^.pc) (n^.acc) ++ renderOct (p^.oct)
     getMarkup _ = []
 
 instance Renderable LyRest where
@@ -29,27 +29,29 @@ instance Renderable LyRest where
     getMarkup _ = []
 
 instance Renderable LyPerc where
-    renderInStaff n _ = xNote n
+    renderInStaff n _ = xNote (n & pitch .~ (OneLy (n^.pitch,n^.acc,n^.inst)))
     getMarkup (LyPerc s) = [markupText s]
 
 instance Renderable LyEffect where
-    renderInStaff n _ = xNote n
+    renderInStaff n _ = xNote (n & pitch .~ (OneLy (n^.pitch,n^.acc,n^.inst)))
     getMarkup _ = []
 
 instance Renderable LyLyric where
-    renderInStaff n _ = xNote n
+    renderInStaff n _ = xNote (n & pitch .~ (OneLy (n^.pitch,n^.acc,n^.inst)))
     getMarkup (LyLyric s) = [markupText s]
 
 instance Renderable LyGrace where
-    renderInStaff n (LyGrace mus) = "\\grace {" ++ allRenderingForGrace n mus ++ "}"
+    renderInStaff n (LyGrace mus) = "\\grace {" ++ allRenderingForGrace (n & pitch .~ (OneLy (n^.pitch,n^.acc,n^.inst))) mus ++ "}"
     getMarkup _ = []
 
 instance Renderable LyMeasureEvent where
     renderInStaff _ _ = " | "
     getMarkup _ = []
 
-instance Renderable LyBeatEvent where
-    renderInStaff _ _ = ""
+instance Renderable LyKeyEvent where
+    renderInStaff _ (LyKeyEvent k) = "\\key " ++ pitch ++ " " ++ mode ++ " " where
+        pitch = "c"
+        mode = "major"
     getMarkup _ = []
 
 instance Renderable LyBeatEvent where
@@ -309,7 +311,7 @@ renderArt Portato = "-_"
 renderArt Staccatissimo = "-|"
 renderArt Stopped = "-+"
 renderArt Accent = "->"
-
+{-
 renderInStaff :: [InTime (Note MultiPitchLy)] -> String
 renderInStaff mus = concat $ intersperse " " $ map f mus where
     f note = note
@@ -317,7 +319,7 @@ renderInStaff mus = concat $ intersperse " " $ map f mus where
         & renderNoteBodyInStaff
         & renderNoteItems
         & extractRenderedNote
-
+-}
 extractRenderedNote :: NoteInProgress -> String
 extractRenderedNote (n,w) = let
     nonGraceOnly :: String -> String
