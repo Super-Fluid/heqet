@@ -136,8 +136,7 @@ class Ly'' a where
     getMarkup :: a -> [String]
     slurrable :: a -> Bool
     chordable :: a -> Bool
-    pitchHeight :: a -> Maybe Double -- for comparing
-    comparable :: a -> Bool
+    pitchHeight :: a -> Maybe Double -- for comparing. Not all Lys can be compared.
     takesUpTime :: a -> Bool -- notes do, key changes don't
     -- alternatively, can a slur pass through it? If so, then it doesn't take up time
 
