@@ -26,8 +26,6 @@ renderOct oct
     | oct < 0 = replicate (- oct) ','
     | otherwise = replicate (oct) '\''
 
-
-{- 
 instance Ly'' LyRest where
     renderInStaff _ _ = "r"
     getMarkup _ = []
@@ -36,7 +34,7 @@ instance Ly'' LyRest where
     pitchHeight ly = Just 0
     takesUpTime _ = True
 
-instance Ly'' LyPercwhere
+instance Ly'' LyPerc where
     renderInStaff n _ = xNote n
     getMarkup (LyPerc s) = [markupText s]
     slurrable _ = True
@@ -104,7 +102,7 @@ instance Ly'' LyBeatEvent where
     takesUpTime _ = False
 
 instance Ly'' LyClefEvent where
-    renderInStaff n (LyClefEvent c) = "\\clef " ++ clef ++ " " where
+    renderInStaff _ (LyClefEvent c) = "\\clef " ++ clef ++ " " where
         clef = case c of
             Treble -> "treble"
             Alto -> "alto"
@@ -119,10 +117,9 @@ instance Ly'' LyClefEvent where
     takesUpTime _ = False
 
 instance Ly'' LyMeterEvent where
-    renderInStaff n ly =
+    renderInStaff _ (LyMeterEvent (Meter num denom)) = "\\time " ++ show num ++ "/" ++ show denom ++ " "
     getMarkup _ = undefined
     slurrable _ = undefined
     chordable _ = undefined
     pitchHeight _ = undefined
     takesUpTime _ = False
--}
