@@ -76,24 +76,22 @@ altoAltTreble = twoClefs Alto Treble [pp| c' |] [pp| b'' |] [pp| b'' |]
 -- the allowable range.
 isAbove :: Ly -> Pitch -> Bool
 isAbove (Ly a) q = let 
-    lyPitchTypeRep = typeOf (LyPitch undefined)
     x = cast a :: Maybe LyPitch
     lp = fromJust x -- not used unless type is right and thus cast succeeded
                          -- lazyness FTW!
     (LyPitch p) = lp
-    in case typeOf a of
-        lyPitchTypeRep -> (pitch2double p) > (pitch2double q)
-        _ -> False
+    in if typeOf a == typeOf (LyPitch undefined) 
+       then (pitch2double p) > (pitch2double q)
+       else False
 
 isBelow :: Ly -> Pitch -> Bool
 isBelow (Ly a) q = let 
-    lyPitchTypeRep = typeOf (LyPitch undefined)
     x = cast a :: Maybe LyPitch
     lp = fromJust x
     (LyPitch p) = lp
-    in case typeOf a of
-        lyPitchTypeRep -> (pitch2double p) < (pitch2double q)
-        _ -> False
+    in if typeOf a == typeOf (LyPitch undefined)
+       then (pitch2double p) < (pitch2double q)
+       else False
 
 -- for defining playability:
 simpleRange :: Pitch -> Pitch -> Music -> Music

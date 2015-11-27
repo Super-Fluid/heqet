@@ -140,11 +140,7 @@ renderOneNoteBodyInStaff :: (Note MultiPitchLy) -> (Ly,Maybe Accidental,Maybe In
 renderOneNoteBodyInStaff n (Ly ly,a,_) = renderInStaff n ly
 
 isGraceNote :: Ly -> Bool
-isGraceNote (Ly a) = let
-    lyGraceTypeRep = typeOf (LyGrace undefined)
-    in case typeOf a of
-        lyGraceTypeRep -> True
-        _ -> False
+isGraceNote (Ly a) = (typeOf a) == (typeOf (LyGrace undefined))
 
 renderManyNoteBodiesInStaff :: (Note MultiPitchLy) -> [(Ly,Maybe Accidental,Maybe Instrument)] -> String
 renderManyNoteBodiesInStaff n lys = "< " ++ (concat $ intersperse " " $ map (renderOneNoteBodyInStaff n) lys) ++ " >"

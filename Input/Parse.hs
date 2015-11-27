@@ -595,10 +595,9 @@ placeNoteItems (ly, nis) = let baseNote = emptyNote { _pitch = ly }
         f bn (Error2 s)       = bn & errors %~ (s:)
         f bn (LongCommand s t) = bn & exprCommands %~ ((ExprCommand {_begin = s, _end = t}):)
         f bn (Cents2 n) = let
-            lyPitchTypeRep = typeOf (LyPitch undefined)
-            withcents (Ly a) = case typeOf a of
-                lyPitchTypeRep -> let (LyPitch p) = fromJust $ cast a in Ly $ LyPitch (p & cents .~ n)
-                _ -> Ly a
+            withcents (Ly a) = if typeOf a == typeOf (LyPitch undefined) 
+                               then let (LyPitch p) = fromJust $ cast a in Ly $ LyPitch (p & cents .~ n)
+                               else Ly a
             in bn & pitch %~ withcents
 
 isSimpleArt c = c `elem` ".->^+_|"
@@ -647,10 +646,9 @@ extractFirstPitch [] = error "empty quoted pitch"
 extractFirstPitch mus = let
     firstInTime = head mus
     firstLy = firstInTime ^. val.pitch
-    lyPitchTypeRep = typeOf (Ly (LyPitch undefined))
-    f (Ly a) = case typeOf a of
-        lyPitchTypeRep -> let (LyPitch pp) = fromJust $ cast a in pp
-        _ -> error "note in quoted pitch is not a LyPitch"
+    f (Ly a) = if typeOf a == typeOf (Ly (LyPitch undefined))
+               then let (LyPitch pp) = fromJust $ cast a in pp
+               else error "note in quoted pitch is not a LyPitch"
     in f firstLy
 
 test :: QuasiQuoter
