@@ -5,7 +5,6 @@ import Types
 import qualified Tables
 import Output.Templates
 import Tools
-import Output.RenderTypes
 import List
 import qualified Output.LilypondSettings
 import qualified Instruments
@@ -21,7 +20,7 @@ import Data.Ord
 import Safe
 
 instance Renderable LyPitch where
-    renderInStaff n (LyPitch p) = renderPitchAcc (p^.pc) (n^.acc) ++ renderOct (p^.oct)
+    renderInStaff n (Ly (LyPitch p)) = renderPitchAcc (p^.pc) (n^.acc) ++ renderOct (p^.oct)
     getMarkup _ = []
 
 instance Renderable LyRest where
@@ -29,19 +28,19 @@ instance Renderable LyRest where
     getMarkup _ = []
 
 instance Renderable LyPerc where
-    renderInStaff n _ = xNote (n & pitch .~ (OneLy (n^.pitch,n^.acc,n^.inst)))
+    renderInStaff n _ = xNote n
     getMarkup (LyPerc s) = [markupText s]
 
 instance Renderable LyEffect where
-    renderInStaff n _ = xNote (n & pitch .~ (OneLy (n^.pitch,n^.acc,n^.inst)))
+    renderInStaff n _ = xNote n
     getMarkup _ = []
 
 instance Renderable LyLyric where
-    renderInStaff n _ = xNote (n & pitch .~ (OneLy (n^.pitch,n^.acc,n^.inst)))
+    renderInStaff n _ = xNote n
     getMarkup (LyLyric s) = [markupText s]
 
 instance Renderable LyGrace where
-    renderInStaff n (LyGrace mus) = "\\grace {" ++ allRenderingForGrace (n & pitch .~ (OneLy (n^.pitch,n^.acc,n^.inst))) mus ++ "}"
+    renderInStaff n (Ly (LyGrace mus)) = "\\grace {" ++ allRenderingForGrace n mus ++ "}"
     getMarkup _ = []
 
 instance Renderable LyMeasureEvent where
@@ -49,7 +48,7 @@ instance Renderable LyMeasureEvent where
     getMarkup _ = []
 
 instance Renderable LyKeyEvent where
-    renderInStaff _ (LyKeyEvent k) = "\\key " ++ pitch ++ " " ++ mode ++ " " where
+    renderInStaff _ (Ly (LyKeyEvent k)) = "\\key " ++ pitch ++ " " ++ mode ++ " " where
         pitch = "c"
         mode = "major"
     getMarkup _ = []
@@ -59,7 +58,7 @@ instance Renderable LyBeatEvent where
     getMarkup _ = []
 
 instance Renderable LyClefEvent where
-    renderInStaff _ (LyClefEvent c) = "\\clef " ++ clef ++ " " where
+    renderInStaff _ (Ly (LyClefEvent c)) = "\\clef " ++ clef ++ " " where
         clef = case c of
             Treble -> "treble"
             Alto -> "alto"
@@ -70,7 +69,7 @@ instance Renderable LyClefEvent where
     getMarkup _ = []
 
 instance Renderable LyMeterEvent where
-    renderInStaff _ (LyMeterEvent (Meter num denom)) = "\\time " ++ show num ++ "/" ++ show denom ++ " "
+    renderInStaff _ (Ly (LyMeterEvent (Meter num denom))) = "\\time " ++ show num ++ "/" ++ show denom ++ " "
     getMarkup _ = []
 
 renderPitchAcc :: PitchClass -> (Maybe Accidental) -> String
@@ -138,13 +137,7 @@ renderNoteBodyInStaff (n, w) = let
     in (n, w & noteItems .~ nis' & body .~ body' & graceNoteKludge .~ grace)
 
 renderOneNoteBodyInStaff :: (Note MultiPitchLy) -> (Ly,Maybe Accidental,Maybe Instrument) -> String
-renderOneNoteBodyInStaff n (ly,a,_) = case ly of
-    Pitch p -> renderPitchAcc (p^.pc) a ++ renderOct (p^.oct)
-    Perc s -> xNote n
-    Rest -> "r"
-    Effect -> xNote n
-    Lyric s -> xNote n
-    Grace mus -> "\\grace {" ++ allRenderingForGrace n mus ++ "}"
+renderOneNoteBodyInStaff n (ly,a,_) = renderInStaff n ly
 
 isGraceNote :: Ly -> Bool
 isGraceNote (Grace _) = True
@@ -157,13 +150,7 @@ renderManyNoteBodiesInStaff n lys = "< " ++ (concat $ intersperse " " $ map (ren
 Get markup to render Ly types that we don't have a better way to render.
 -}
 getMarkupFromOneLy :: (Ly,Maybe Accidental,Maybe Instrument) -> [String]
-getMarkupFromOneLy (ly,_,_) = case ly of
-    Pitch _ -> []
-    Perc s -> [markupText s]
-    Rest -> []
-    Effect -> []
-    Lyric s -> [markupText s]
-    Grace mus -> []
+getMarkupFromOneLy (ly,_,_) = getMarkup ly
 
 getMarkupFromManyLys :: [(Ly,Maybe Accidental,Maybe Instrument)] -> [String]
 getMarkupFromManyLys = concat . map getMarkupFromOneLy

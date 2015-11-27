@@ -4,14 +4,13 @@ module LyInstances where
 import Types
 import qualified Tables
 import Output.Templates
-import Output.RenderTypes
 
 import Data.Tuple
 import Control.Lens
 import Safe
 
 instance Playable LyPitch where
-    info (LyPitch p) = Just $ PlayInfo { 
+    info (Ly (LyPitch p)) = Just $ PlayInfo { 
     _slurrable = True
   , _chordable = True
   , _pitchHeight = Just (((2 ** (1/12)) ** ((fromIntegral $ ((fromEnum (p^.pc) + 3) `mod` 12)) + ((fromIntegral (p^.oct) - 4) * 12) + ((p^.cents)/100))) * 440)

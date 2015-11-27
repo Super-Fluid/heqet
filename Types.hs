@@ -87,8 +87,6 @@ instance Show Instrument where
 instance Eq Instrument where
     i == j = (_name i) == (_name j)
 
-data Ly' = forall a. (Renderable a, Playable a) => Ly' a
-
 data Note a = Note { 
       _pitch :: a
     , _acc :: Maybe Accidental
@@ -129,15 +127,17 @@ emptyNote = Note {
     , _key = Nothing
     }
 
-data Ly = Pitch Pitch | Rest | Perc Perc | Effect | Lyric Lyric | Grace Music
-    deriving (Eq,Show)
+--data Ly = Pitch Pitch | Rest | Perc Perc | Effect | Lyric Lyric | Grace Music
+--    deriving (Eq,Show)
+
+data Ly = forall a. (Renderable a, Playable a, Typeable a, Show a) => Ly a
 
 class Renderable a where
-    renderInStaff :: (Note Ly) -> a -> String
-    getMarkup :: a -> [String]
+    renderInStaff :: (Note MultiPitchLy) -> (Ly a) -> String
+    getMarkup :: (Ly a) -> [String]
 
 class Playable a where
-    info :: a -> Maybe PlayInfo
+    info :: (Ly a) -> Maybe PlayInfo
     -- What's playable? Notes are, key changes aren't.
     -- Can a slur pass through it? If so, then it's not playable.
 
@@ -187,6 +187,38 @@ type Measure = [Beat]
 type MeasureTrack = [Measure]
 
 type Tempo = (PointInTime -> PointInPerformance)
+
+-- Types for rendering
+
+type ChordR = [Note Ly]
+data LinearNote = ChordR ChordR | UniNote (Note Ly)
+    deriving (Show)
+type Linear = [InTime LinearNote]
+type Polyphony = [Linear]
+type Staff = [Polyphony]
+type Stage1 = [Staff]
+
+data WrittenNote = WrittenNote { 
+      _preceeding :: [String]
+    , _preceedingNoteItems :: [String]
+    , _body :: String
+    , _duration :: Duration
+    , _noteItems :: [String]
+    , _following :: [String]
+    , _graceNoteKludge :: Bool -- if true, don't write any duration or noteItems
+    }
+    deriving (Show)
+makeLenses ''WrittenNote
+
+data MultiPitchLy = OneLy (Ly,Maybe Accidental,Maybe Instrument) 
+    | ManyLy [(Ly,Maybe Accidental,Maybe Instrument)]
+    deriving (Show)
+
+type NoteInProgress = (Note MultiPitchLy, WrittenNote)
+type LinearInProgress = [NoteInProgress]
+type PolyInProgress = [LinearInProgress]
+type StaffInProgress = [PolyInProgress]
+type ScoreInProgress = [StaffInProgress]
 
 makeLenses ''InTime
 makeLenses ''ExprCommand
