@@ -137,11 +137,24 @@ class Renderable a where
     getMarkup :: a -> [String]
 
 class Playable a where
-    slurrable :: a -> Bool
-    chordable :: a -> Bool
-    pitchHeight :: a -> Maybe Double -- for comparing. Not all Lys can be compared.
-    takesUpTime :: a -> Bool -- notes do, key changes don't
-    -- alternatively, can a slur pass through it? If so, then it doesn't take up time
+    info :: a -> Maybe PlayInfo
+    -- What's playable? Notes are, key changes aren't.
+    -- Can a slur pass through it? If so, then it's not playable.
+
+    -- "info" is a Maybe because not all things are playable. Now you ask,
+    -- shouldn't things that aren't playable just not be instances of
+    -- this class? Well, because I want a list of things, some
+    -- of which are playable and some which aren't, with the ability
+    -- to filter out just the playable ones on the occasion that we
+    -- need playable things. Unfortunately, I can't figure out a way to
+    -- filter things by class; there's no "Classable" like there is Typeable.
+
+data PlayInfo = PlayInfo {
+    _slurrable :: Bool
+  , _chordable :: Bool
+  , _pitchHeight :: Maybe Double -- for comparing. Not all Lys can be compared.
+    }
+    deriving (Show)
 
 data LyPitch = LyPitch Pitch
     deriving (Show,Read,Typeable)
@@ -180,3 +193,4 @@ makeLenses ''ExprCommand
 makeLenses ''Pitch
 makeLenses ''Note
 makeLenses ''Instrument
+makeLenses ''PlayInfo
