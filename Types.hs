@@ -136,8 +136,10 @@ class Ly'' a where
     getMarkup :: a -> [String]
     slurrable :: a -> Bool
     chordable :: a -> Bool
-    pitchHeight :: a -> Maybe Double
+    pitchHeight :: a -> Maybe Double -- for comparing
     comparable :: a -> Bool
+    takesUpTime :: a -> Bool -- notes do, key changes don't
+    -- alternatively, can a slur pass through it? If so, then it doesn't take up time
 
 data LyPitch = LyPitch Pitch
     deriving (Show,Read,Typeable)
