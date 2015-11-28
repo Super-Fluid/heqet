@@ -15,7 +15,19 @@ basicScore contents = [r|
 \score { <<
 |] ++ contents ++ [r|
 >> 
-\layout { }
+\layout { 
+    % let each staff have a separate time signature
+  \context {
+    \Score
+    \remove "Timing_translator"
+    \remove "Default_bar_line_engraver"
+  }
+  \context {
+    \Staff
+    \consists "Timing_translator"
+    \consists "Default_bar_line_engraver"
+  } 
+}
 \midi { }
 }|]
 
@@ -27,8 +39,7 @@ shortInstrumentName = "|] ++ (concat $ intersperse " & " $ map (^.shortName) ins
 } { 
 \once \override Staff.TimeSignature #'stencil = ##f 
 \clef bass
-\cadenzaOn |] ++ contents ++ [r|
-\cadenzaOff
+|] ++ contents ++ [r|
 \bar "|."}
 |]
 
