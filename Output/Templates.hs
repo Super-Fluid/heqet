@@ -37,7 +37,7 @@ errorNoAccidental :: String
 errorNoAccidental = [r|^\\markup{\\sharp\\flat}|]
 
 errorRedNotehead :: String
-errorRedNotehead = [r| \tweak #'color #red |]
+errorRedNotehead = [r|  \tweak #'font-size #8 \tweak #'color #red |]
 
 -- etc
 markupText :: String -> String
