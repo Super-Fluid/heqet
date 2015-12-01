@@ -127,14 +127,14 @@ renderMusicErrors (n,w) = let
 renderNoteBodyInStaff :: NoteInProgress -> NoteInProgress
 renderNoteBodyInStaff (n, w) = let
     body' = case n^.pitch of 
-        OneLy ly -> renderOneNoteBodyInStaff n ly
-        ManyLy lys -> renderManyNoteBodiesInStaff n lys
+        [ly] -> renderOneNoteBodyInStaff n ly
+        lys -> renderManyNoteBodiesInStaff n lys
     nis' = case n^.pitch of
-        OneLy ly -> (getMarkupFromOneLy ly)++(w^.noteItems)
-        ManyLy lys -> (getMarkupFromManyLys lys)++(w^.noteItems)
+        [ly] -> (getMarkupFromOneLy ly)++(w^.noteItems)
+        lys -> (getMarkupFromManyLys lys)++(w^.noteItems)
     grace = case n^.pitch of
-        OneLy x -> isGraceNote (x^._1)
-        ManyLy _ -> False -- Grace notes are not auto-chordable
+        [x] -> isGraceNote (x^._1)
+        _ -> False -- Grace notes are not auto-chordable
     in (n, w & noteItems .~ nis' & body .~ body' & graceNoteKludge .~ grace)
 
 renderOneNoteBodyInStaff :: (Note MultiPitchLy) -> (Ly,Maybe Accidental,Maybe Instrument) -> String
@@ -170,14 +170,21 @@ renderNoteItems (n,w) = let
 
 canLinearInProgressBeSlurredTo :: LinearInProgress -> Bool
 canLinearInProgressBeSlurredTo [] = False
-canLinearInProgressBeSlurredTo (nip:_) = canMultiPitchLyBeSlurredTo (nip^._1.pitch)
+canLinearInProgressBeSlurredTo lin = canFirstPlayableBeSlurredTo $ map (^._1.pitch) lin
 
 -- A chord can be slurred to if any lys in it can be.
 canMultiPitchLyBeSlurredTo :: MultiPitchLy -> Bool
-canMultiPitchLyBeSlurredTo (OneLy (ly,_,_)) = canBeSlurredTo ly
-canMultiPitchLyBeSlurredTo (ManyLy xs) = let
+canMultiPitchLyBeSlurredTo [(ly,_,_)] = canBeSlurredTo ly
+canMultiPitchLyBeSlurredTo xs = let
     lys = map (^._1) xs
     in any canBeSlurredTo lys
+
+canFirstPlayableBeSlurredTo :: [MultiPitchLy] -> Bool
+canFirstPlayableBeSlurredTo lys = let 
+    playables = filter (\mply -> any (\ly_a_is -> isPlayable (ly_a_is^._1)) mply) lys
+    in case headMay playables of
+        Nothing -> False
+        Just p -> canMultiPitchLyBeSlurredTo p
 
 {-
 Yay Playable typeclass
@@ -234,8 +241,8 @@ applySlursToLinear enteringSlur existsSlurableFollowing lin =
     applySlursToLinear'h (isInSlur,acc) [] = (isInSlur,[])
     applySlursToLinear'h (isInSlur,acc) (note:notes) = let
         existsSlurableNextNote = case notes of
-            (nextNote:_) -> canMultiPitchLyBeSlurredTo (nextNote^._1.pitch)
             [] -> existsSlurableFollowing 
+            moreNotes -> canFirstPlayableBeSlurredTo $ map (^._1.pitch) moreNotes
             -- second case: only one note remaining in
             -- this linear, so we have to use our given information about what
             -- comes after this.
@@ -456,8 +463,8 @@ scoreToLy score = basicScore (concat $ map (staffFromProgress.applySlursToStaff.
 staffInstruments :: StaffInProgress -> [Instrument]
 staffInstruments = let
     fromNoteInProgress (n,_) = case n^.pitch of
-        OneLy (_,_,i) -> [i]
-        ManyLy ly_a_is -> map (^._3) ly_a_is
+        [(_,_,i)] -> [i]
+        ly_a_is -> map (^._3) ly_a_is
     fromLinearInProgress = concatMap fromNoteInProgress
     fromPolyInProgress = concatMap fromLinearInProgress
     fromStaffInProgress = concatMap fromPolyInProgress
@@ -486,8 +493,8 @@ the same except for the pitch, so we only need to look
 at the first one.
 -}
 packChordsIntoMultiPitchNotes :: LinearNote -> (Note MultiPitchLy)
-packChordsIntoMultiPitchNotes [n] = n & pitch .~ OneLy (n^.pitch,n^.acc,n^.inst)
-packChordsIntoMultiPitchNotes ns = (head ns) & pitch .~ ManyLy (zip3 (map (^.pitch) ns) (map (^.acc) ns) (map (^.inst) ns))
+packChordsIntoMultiPitchNotes [n] = n & pitch .~ [(n^.pitch,n^.acc,n^.inst)]
+packChordsIntoMultiPitchNotes ns = (head ns) & pitch .~ (zip3 (map (^.pitch) ns) (map (^.acc) ns) (map (^.inst) ns))
 
 linToProgress :: Linear -> LinearInProgress
 linToProgress lin = timePitchSort lin 
