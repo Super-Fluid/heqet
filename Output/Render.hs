@@ -103,6 +103,7 @@ commonDurations = [
 renderDuration :: Duration -> String
 renderDuration dur
     | isJust (lookup dur commonDurations) = fromJustNote "renderDuration" (lookup dur commonDurations)
+    | dur == 0 = ""
     | otherwise = "1"
 
 renderOct :: Octave -> String
@@ -345,8 +346,8 @@ isLyChordable (Ly a) = case info a of
     Nothing -> False -- again, we shouldn't ever use this value...
 
 formChord :: [InTime (Note Ly)] -> InTime LinearNote
-formChord [it] = it & val .~ UniNote (it^.val)
-formChord its = (head its) & val .~ ChordR (its & map (^.val))
+formChord [it] = it & val .~ [(it^.val)]
+formChord its = (head its) & val .~ (its & map (^.val))
 
 combineChords :: Music -> Linear
 combineChords mus = mus 
@@ -355,11 +356,13 @@ combineChords mus = mus
     & map formChord
 
 pitchLN :: LinearNote -> Double
-pitchLN (UniNote n) = pitch2num n
-pitchLN (ChordR ns) = (sum $ map pitch2num ns) / (fromIntegral $ length ns)
+pitchLN ([n]) = pitch2num n
+pitchLN (ns) = (sum $ map pitch2num ns) / (fromIntegral $ length ns)
 
 timePitchSort :: Linear -> Linear
-timePitchSort = sortBy $ \it1 it2 -> (it1^.t) `compare` (it2^.t) <> (pitchLN $ it1^.val) `compare` (pitchLN $ it2^.val)
+timePitchSort = sortBy $ \it1 it2 -> (it1^.t) `compare` (it2^.t) <>
+                             (it1^.val & head & (^.pitch) & isPlayable) `compare` (it2^.val & head & (^.pitch) & isPlayable) <> -- non playable items come first
+                             (pitchLN $ it1^.val) `compare` (pitchLN $ it2^.val)
 
 findPolys :: Linear -> Staff
 findPolys lin = reverse $ foldl f [] (timePitchSort lin) where
@@ -423,8 +426,8 @@ or to count a chord as a single note...testing required.
 heightAndLength :: InTime LinearNote -> (Double,Rational)
 heightAndLength it = let
     lys = case it^.val of
-        UniNote n -> [n^.pitch]
-        ChordR ns -> map (^.pitch) ns
+        [n] -> [n^.pitch]
+        ns -> map (^.pitch) ns
     lyInfo = map heightAndLengthPossibilityOfLy lys
     summedHeight = sum $ map (^._1) lyInfo
     numberOfAverageable = length $ filter (^._2) lyInfo
@@ -483,8 +486,8 @@ the same except for the pitch, so we only need to look
 at the first one.
 -}
 packChordsIntoMultiPitchNotes :: LinearNote -> (Note MultiPitchLy)
-packChordsIntoMultiPitchNotes (UniNote n) = n & pitch .~ OneLy (n^.pitch,n^.acc,n^.inst)
-packChordsIntoMultiPitchNotes (ChordR ns) = (head ns) & pitch .~ ManyLy (zip3 (map (^.pitch) ns) (map (^.acc) ns) (map (^.inst) ns))
+packChordsIntoMultiPitchNotes [n] = n & pitch .~ OneLy (n^.pitch,n^.acc,n^.inst)
+packChordsIntoMultiPitchNotes ns = (head ns) & pitch .~ ManyLy (zip3 (map (^.pitch) ns) (map (^.acc) ns) (map (^.inst) ns))
 
 linToProgress :: Linear -> LinearInProgress
 linToProgress lin = timePitchSort lin 

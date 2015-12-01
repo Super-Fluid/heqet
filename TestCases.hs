@@ -56,3 +56,11 @@ badname = [music| c4 foo2 d4 |] & mapOverNotes (\x -> x
     & line .~ Just "1"
     & inst .~ Just Instruments.cello
     )
+
+slurOverBar = let 
+    m = [music| c''1 d''1|]
+    bar = InTime {_val = Note {_pitch = Ly LyMeasureEvent, _acc = Just Natural, _noteCommands = [], _exprCommands = [], _nonDistCommands = [], _errors = [], _isSlurred = False, _isTied = False, _dynamic = Nothing, _artics = [], _tags = [], _line = Nothing, _clef = Nothing, _inst = Nothing, _chord = Nothing, _key = Nothing}, _dur = 0, _t = 4}
+    in [(m!!0),bar,(m!!1)] & mapOverNotes (\x -> x
+        & line .~ Just "1"
+        & inst .~ Just Instruments.violin
+    )

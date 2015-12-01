@@ -7,6 +7,7 @@ module Types where
 
 import Control.Lens
 import Data.Typeable
+import Data.Maybe
 
 data PitchClass = C | Cs | D | Ds | E | F | Fs | G | Gs | A | As | B
     deriving (Show, Eq, Ord, Enum, Bounded, Read)
@@ -130,6 +131,9 @@ emptyNote = Note {
 data Ly = forall a. (Renderable a, Playable a, Typeable a, Show a) => Ly a
     deriving (Typeable)
 
+isPlayable :: Ly -> Bool
+isPlayable (Ly a) = isJust $ info a
+
 instance Show Ly where
     show (Ly a) = "Ly " ++ show a
 
@@ -200,9 +204,7 @@ type Tempo = (PointInTime -> PointInPerformance)
 
 -- Types for rendering
 
-type ChordR = [Note Ly]
-data LinearNote = ChordR ChordR | UniNote (Note Ly)
-    deriving (Show)
+type LinearNote = [Note Ly]
 type Linear = [InTime LinearNote]
 type Polyphony = [Linear]
 type Staff = [Polyphony]
