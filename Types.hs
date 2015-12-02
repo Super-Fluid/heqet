@@ -206,7 +206,8 @@ type Tempo = (PointInTime -> PointInPerformance)
 
 type LinearNote = [Note Ly]
 type Linear = [InTime LinearNote]
-type Polyphony = [Linear]
+data Polyphony = StaffEvent (InTime LinearNote) | Voices [Linear]
+    deriving (Show)
 type Staff = [Polyphony]
 type Stage1 = [Staff]
 

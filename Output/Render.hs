@@ -400,15 +400,26 @@ timePitchSort = sortBy $ \it1 it2 -> (it1^.t) `compare` (it2^.t) <>
 
 findPolys :: Linear -> Staff
 findPolys lin = reverse $ foldl f [] (timePitchSort lin) where
-    f [] it = [ emptyCol & atIndex 0 .~ [it] ]
-    f (current:past) it = let (voiceN,succeeded) = tryToFit it current
+    f :: Staff -> (InTime LinearNote) -> Staff
+    f [] it = 
+        if isLinearNotePlayable (it^.val)
+        then map Voices $ g [] it
+        else [StaffEvent it]
+    f (current:past) it = 
+        if isLinearNotePlayable (it^.val)
+        then (map Voices $ g current it)++past
+        else (StaffEvent it):current:past
+    -- g is only for fitting in playable notes
+    g :: [Linear] -> (InTime LinearNote) -> [[Linear]]
+    g [] it = [ emptyCol & atIndex 0 .~ [it] ]
+    g current it = let (voiceN,succeeded) = tryToFit it current
         in if not succeeded
-           then error "too many simultaneous notes to fit on a staff"
+           then current -- discard the voices that don't fit (TODO: write error)
            else if voiceN == 0
                 then if all (checkLineFit it) current
-                     then (emptyCol & atIndex 0 .~ [it]):current:past
-                     else (current & atIndex 0 %~ (it:)):past
-                else (current & atIndex voiceN %~ (it:)):past
+                     then (emptyCol & atIndex 0 .~ [it]):current
+                     else (current & atIndex 0 %~ (it:))
+                else (current & atIndex voiceN %~ (it:))
     emptyCol = replicate Output.LilypondSettings.maxNumberOfVoices []
     tryToFit :: (InTime LinearNote) -> Polyphony -> (Int,Bool)
     tryToFit it col = tryToFitHelper $ checkFit it col
@@ -417,6 +428,9 @@ findPolys lin = reverse $ foldl f [] (timePitchSort lin) where
     checkFit it col = snd <$> find (checkLineFit it . fst) (zip col [0..])
     checkLineFit it line = all (not . conflictsWith it) line
     conflictsWith it1 it2 = it1^.t < (it2^.t + it2^.dur) && it2^.t < (it1^.t + it1^.dur)
+
+isLinearNotePlayable :: LinearNote -> Bool
+isLinearNotePlayable ns = any (\n -> n^.pitch & isPlayable) ns
 
 {-
 Put voices in pitch order within each poly,
