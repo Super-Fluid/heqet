@@ -103,3 +103,6 @@ appendNI :: NoteCommand -> [NoteCommand] -> [NoteCommand]
 appendNI nc ncs = if nc `elem` ncs
 	    	  then ncs
 		  else (nc:ncs)
+
+appendMusic :: Music -> Music -> Music
+appendMusic m1 m2 = m1 ++ (startMusicAt (getEndTime m1) m2)

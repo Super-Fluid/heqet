@@ -14,8 +14,8 @@ fromEu (E.Prim (E.Note dur (pc, oct))) = let
 	   & acc .~ Just hegetAcc
        it = InTime { _val = n, _dur = dur, _t = 0 }
        in [it]
-fromEu (E.Prim (E.Rest dur)) = []
-fromEu (m1 E.:+: m2) = []
+fromEu (E.Prim (E.Rest dur)) = [InTime { _val = emptyNote & pitch .~ Ly (LyRest), _dur = dur, _t = 0}]
+fromEu (m1 E.:+: m2) = (fromEu m1) `appendMusic` (fromEu m2)
 fromEu (m1 E.:=: m2) = fromEu m1 ++ fromEu m2 -- just smoosh them together
 fromEu (E.Modify (E.Tempo tempo) m) = fromEu m
 fromEu (E.Modify (E.Transpose p) m) = transpose (absPitch2Pitch p) (fromEu m)
@@ -33,8 +33,8 @@ fromEu1 (E.Prim (E.Note dur ((pc, oct), nas))) = let
 	   & acc .~ Just hegetAcc
        it = InTime { _val = n, _dur = dur, _t = 0 }
        in foldl (&) [it] (map applyEuNoteAttr nas) -- apply all note attributes to the note 
-fromEu1 (E.Prim (E.Rest dur)) = []
-fromEu1 (m1 E.:+: m2) = []
+fromEu1 (E.Prim (E.Rest dur)) = [InTime { _val = emptyNote & pitch .~ Ly (LyRest), _dur = dur, _t = 0}]
+fromEu1 (m1 E.:+: m2) = (fromEu1 m1) `appendMusic` (fromEu1 m2)
 fromEu1 (m1 E.:=: m2) = fromEu1 m1 ++ fromEu1 m2 -- just smoosh them together
 fromEu1 (E.Modify (E.Tempo tempo) m) = fromEu1 m
 fromEu1 (E.Modify (E.Transpose p) m) = transpose (absPitch2Pitch p) (fromEu1 m)
