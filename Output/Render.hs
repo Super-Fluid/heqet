@@ -19,6 +19,8 @@ import Data.Monoid
 import Data.Ord
 import Safe
 
+import Debug.Trace
+
 instance Renderable LyPitch where
     renderInStaff n (LyPitch p) = renderPitchAcc (p^.pc) (n^.acc) ++ renderOct (p^.oct)
     getMarkup _ = []
@@ -252,8 +254,15 @@ applySlursToLinear enteringSlur existsSlurableFollowing lin =
                                                 existsSlurableNextNote 
                                                 thisNoteIsSlurred
         processedNote = modifier note
-        (slurComingFromLinear,remainder) = applySlursToLinear'h (slurComingFromNote,[]) notes
-        in (slurComingFromLinear,processedNote:remainder)
+        (slurComingFromLinear,remainder) = 
+            if shouldProcessThisNote
+            then applySlursToLinear'h (slurComingFromNote,[]) notes
+            else applySlursToLinear'h (enteringSlur,[]) notes
+        shouldProcessThisNote = any isPlayable $ map (^._1) (note^._1.pitch)
+        maybeProcessedNote = if shouldProcessThisNote
+                             then processedNote
+                             else note
+        in (slurComingFromLinear,maybeProcessedNote:remainder)
 
 {-
 Deciding how to mark a slurs is surprisingly tricky.
