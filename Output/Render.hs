@@ -72,6 +72,26 @@ instance Renderable LyMeterEvent where
     renderInStaff _ (LyMeterEvent (Meter num denom)) = "\\time " ++ show num ++ "/" ++ show denom ++ " "
     getMarkup _ = []
 
+{- If a note extends over a non-playable note,
+convert it into two notes tied together 
+-}
+breakDurationsOverNonPlayables :: Music -> Music
+breakDurationsOverNonPlayables mus = let
+    nonPlayables = filter (\it -> it^.val.pitch & isPlayable) mus
+    breakTimes = map (^.t) nonPlayables
+    breakingFunctions = map breakDurationsAtPoint breakTimes
+    in foldl (&) mus breakingFunctions -- apply all the breaking functions
+
+breakDurationsAtPoint :: PointInTime -> Music -> Music
+breakDurationsAtPoint point mus = concatMap breakNote mus where
+    breakNote :: (InTime (Note Ly)) -> [(InTime (Note Ly))]
+    breakNote it = let
+        firstDur = point - (it^.t)
+        secondDur = (it^.t) + (it^.dur) - point
+        in if it^.t < point && (it^.t) + (it^.dur) > point
+           then [it & dur .~ firstDur,  it & t .~ point & dur .~ secondDur]
+           else [it]
+
 renderPitchAcc :: PitchClass -> (Maybe Accidental) -> String
 renderPitchAcc pc (Just acc) = fromJustNote "renderPitchAcc (with acc)" $ lookup (pc,acc) (map swap Tables.en)
 renderPitchAcc pc Nothing = fromJustNote "renderPitchAcc (no acc)" $ lookup pc (map (\((p,a),s) -> (p,s)) (map swap Tables.en))
@@ -516,9 +536,15 @@ linFromProgress lin = lin
     & map extractRenderedNote
     & intersperse " "
     & concat
+    
+{- Prepare the music for rendering -}
+preRender :: Music -> Music
+preRender mus = mus
+    & breakDurationsOverNonPlayables
 
 allRendering :: Music -> String
 allRendering mus = mus
+    & preRender
     & toStage0
     & map combineChords
     & map timePitchSort
