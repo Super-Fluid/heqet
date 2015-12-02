@@ -32,7 +32,13 @@ instKind :: String -> Lens' Music Music
 instKind v = filteringBy (\it -> ((^.kind) <$> it^.val.inst) == Just v)
 
 timeSort :: [InTime a] -> [InTime a]
-timeSort = sortBy $ \it1 it2 -> (it1^.t) `compare` (it2^.t) 
+timeSort = sortBy $ \it1 it2 -> (it1^.t) `compare` (it2^.t)
+
+getEndTime :: Music -> Duration
+getEndTime its = maximum $ map (\it -> (it^.t) + (it^.dur)) (filter (\it -> it^.val.pitch & isPlayable) its)
+
+getStartTime :: Music -> Duration
+getStartTime its = minimum $ map (\it -> (it^.t)) (filter (\it -> it^.val.pitch & isPlayable) its)
 
 {-
 takeMusic :: PointInTime -> Lens' Music Music
@@ -45,28 +51,34 @@ takeMusic pit mus = lens (mapMaybe f) (\s a -> a++s) where
 --dropMusic :: PointInTime -> MusicOf a -> MusicOf a
 
 --reverseMusic :: MusicOf a -> MusicOf a
-
+{-
 instance Ord (InTime (Note Ly)) where
     compare it1 it2 = (it1^.t) `compare` (it2^.t) <> (pitch2num $ it1^.val) `compare` (pitch2num $ it2^.val)
-
+-}
 instance (Eq a) => Ord (InTime a) where
     compare it1 it2 = (it1^.t) `compare` (it2^.t)
 
 pitch2num :: Note Ly -> Double
-pitch2num n = let x = ly2num (n^.pitch)
+pitch2num n = let ly = n^.pitch
+                  x = Just 0 -- .info._Just.pitchHeight
     in  if isJust x
         then fromJust x
         else fromJust $ (lookup "verse" (n^.tags) >>= readMay >>= return.(0-)) <|> Just 0
-
+{- 
 ly2num :: Ly -> Maybe Double
 ly2num (Pitch p) = Just (((2 ** (1/12)) ** ((fromIntegral $ ((fromEnum (p^.pc) + 3) `mod` 12)) + ((fromIntegral (p^.oct) - 4) * 12) + ((p^.cents)/100))) * 440)
 ly2num Rest = Just 0
 ly2num (Perc _) = Just 0 -- expand on this according to common drum notation?
 ly2num (Lyric _) = Nothing
 ly2num (Grace _) = Just 0 
+<<<<<<< HEAD
 
 durationOf :: MusicOf a -> Duration
 durationOf m = maximum $ map (\it -> it^.t + it^.dur) m
 
 transpose :: Pitch -> Music -> Music
 transpose _ = id -- TODO!!
+=======
+ly2num _ = Nothing
+-}
+>>>>>>> master

@@ -15,5 +15,8 @@ import Output.Render
 import Tools
 import TestCases
 import Instruments
+import Assigners
+import Output.FastRender
+import Meters
 
 import Control.Lens
