@@ -100,4 +100,6 @@ applyNoteCommandToAll :: NoteCommand -> Music -> Music
 applyNoteCommandToAll ni = (& traverse.val.noteCommands %~ (appendNI ni))
 
 appendNI :: NoteCommand -> [NoteCommand] -> [NoteCommand]
-appendNI = (:) -- TODO
+appendNI nc ncs = if nc `elem` ncs
+	    	  then ncs
+		  else (nc:ncs)
