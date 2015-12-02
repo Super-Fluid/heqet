@@ -5,19 +5,92 @@ import Types
 import qualified Tables
 import Output.Templates
 import Tools
-import Output.RenderTypes
 import List
 import qualified Output.LilypondSettings
-import qualified Instruments
+import LyInstances
 
 import Control.Lens
 import Data.Maybe
 import Data.Tuple
 import Data.List
+import Data.Typeable
 import Control.Applicative
 import Data.Monoid
 import Data.Ord
 import Safe
+
+instance Renderable LyPitch where
+    renderInStaff n (LyPitch p) = renderPitchAcc (p^.pc) (n^.acc) ++ renderOct (p^.oct)
+    getMarkup _ = []
+
+instance Renderable LyRest where
+    renderInStaff _ _ = "r"
+    getMarkup _ = []
+
+instance Renderable LyPerc where
+    renderInStaff n _ = xNote n
+    getMarkup (LyPerc s) = [markupText s]
+
+instance Renderable LyEffect where
+    renderInStaff n _ = xNote n
+    getMarkup _ = []
+
+instance Renderable LyLyric where
+    renderInStaff n _ = xNote n
+    getMarkup (LyLyric s) = [markupText s]
+
+instance Renderable LyGrace where
+    renderInStaff n (LyGrace mus) = "\\grace {" ++ allRenderingForGrace n mus ++ "}"
+    getMarkup _ = []
+
+instance Renderable LyMeasureEvent where
+    renderInStaff _ _ = " | "
+    getMarkup _ = []
+
+instance Renderable LyKeyEvent where
+    renderInStaff _ (LyKeyEvent k) = "\\key " ++ pitch ++ " " ++ mode ++ " " where
+        pitch = "c"
+        mode = "major"
+    getMarkup _ = []
+
+instance Renderable LyBeatEvent where
+    renderInStaff _ _ = ""
+    getMarkup _ = []
+
+instance Renderable LyClefEvent where
+    renderInStaff _ (LyClefEvent c) = "\\clef " ++ clef ++ " " where
+        clef = case c of
+            Treble -> "treble"
+            Alto -> "alto"
+            Tenor -> "tenor"
+            Bass -> "bass"
+            Treble8 -> "\"treble_8\""
+            CustomClef s -> s -- let's hope the user knows what they're doing
+    getMarkup _ = []
+
+instance Renderable LyMeterEvent where
+    renderInStaff _ (LyMeterEvent (Meter num denom)) = "\\time " ++ show num ++ "/" ++ show denom ++ " "
+    getMarkup _ = []
+
+{- If a note extends over a non-playable note,
+convert it into two notes tied together 
+-}
+breakDurationsOverNonPlayables :: Music -> Music
+breakDurationsOverNonPlayables mus = let
+    nonPlayables = filter (\it -> it^.val.pitch & isPlayable) mus
+    breakTimes = map (^.t) nonPlayables
+    breakingFunctions = map breakDurationsAtPoint breakTimes
+    in foldl (&) mus breakingFunctions -- apply all the breaking functions
+
+breakDurationsAtPoint :: PointInTime -> Music -> Music
+breakDurationsAtPoint point mus = concatMap breakNote mus where
+    breakNote :: (InTime (Note Ly)) -> [(InTime (Note Ly))]
+    breakNote it = let
+        firstDur = point - (it^.t)
+        secondDur = (it^.t) + (it^.dur) - point
+        in if it^.t < point && (it^.t) + (it^.dur) > point
+           then [it & dur .~ firstDur,  it & t .~ point & dur .~ secondDur]
+           else [it]
 
 renderPitchAcc :: PitchClass -> (Maybe Accidental) -> String
 renderPitchAcc pc (Just acc) = fromJustNote "renderPitchAcc (with acc)" $ lookup (pc,acc) (map swap Tables.en)
@@ -50,6 +123,7 @@ commonDurations = [
 renderDuration :: Duration -> String
 renderDuration dur
     | isJust (lookup dur commonDurations) = fromJustNote "renderDuration" (lookup dur commonDurations)
+    | dur == 0 = ""
     | otherwise = "1"
 
 renderOct :: Octave -> String
@@ -73,28 +147,21 @@ renderMusicErrors (n,w) = let
 renderNoteBodyInStaff :: NoteInProgress -> NoteInProgress
 renderNoteBodyInStaff (n, w) = let
     body' = case n^.pitch of 
-        OneLy ly -> renderOneNoteBodyInStaff n ly
-        ManyLy lys -> renderManyNoteBodiesInStaff n lys
+        [ly] -> renderOneNoteBodyInStaff n ly
+        lys -> renderManyNoteBodiesInStaff n lys
     nis' = case n^.pitch of
-        OneLy ly -> (getMarkupFromOneLy ly)++(w^.noteItems)
-        ManyLy lys -> (getMarkupFromManyLys lys)++(w^.noteItems)
+        [ly] -> (getMarkupFromOneLy ly)++(w^.noteItems)
+        lys -> (getMarkupFromManyLys lys)++(w^.noteItems)
     grace = case n^.pitch of
-        OneLy x -> isGraceNote (x^._1)
-        ManyLy _ -> False -- Grace notes are not auto-chordable
+        [x] -> isGraceNote (x^._1)
+        _ -> False -- Grace notes are not auto-chordable
     in (n, w & noteItems .~ nis' & body .~ body' & graceNoteKludge .~ grace)
 
 renderOneNoteBodyInStaff :: (Note MultiPitchLy) -> (Ly,Maybe Accidental,Maybe Instrument) -> String
-renderOneNoteBodyInStaff n (ly,a,_) = case ly of
-    Pitch p -> renderPitchAcc (p^.pc) a ++ renderOct (p^.oct)
-    Perc s -> xNote n
-    Rest -> "r"
-    Effect -> xNote n
-    Lyric s -> xNote n
-    Grace mus -> "\\grace {" ++ allRenderingForGrace n mus ++ "}"
+renderOneNoteBodyInStaff n (Ly ly,a,_) = renderInStaff n ly
 
 isGraceNote :: Ly -> Bool
-isGraceNote (Grace _) = True
-isGraceNote _ = False
+isGraceNote (Ly a) = (typeOf a) == (typeOf (LyGrace undefined))
 
 renderManyNoteBodiesInStaff :: (Note MultiPitchLy) -> [(Ly,Maybe Accidental,Maybe Instrument)] -> String
 renderManyNoteBodiesInStaff n lys = "< " ++ (concat $ intersperse " " $ map (renderOneNoteBodyInStaff n) lys) ++ " >"
@@ -103,13 +170,7 @@ renderManyNoteBodiesInStaff n lys = "< " ++ (concat $ intersperse " " $ map (ren
 Get markup to render Ly types that we don't have a better way to render.
 -}
 getMarkupFromOneLy :: (Ly,Maybe Accidental,Maybe Instrument) -> [String]
-getMarkupFromOneLy (ly,_,_) = case ly of
-    Pitch _ -> []
-    Perc s -> [markupText s]
-    Rest -> []
-    Effect -> []
-    Lyric s -> [markupText s]
-    Grace mus -> []
+getMarkupFromOneLy (Ly ly,_,_) = getMarkup ly
 
 getMarkupFromManyLys :: [(Ly,Maybe Accidental,Maybe Instrument)] -> [String]
 getMarkupFromManyLys = concat . map getMarkupFromOneLy
@@ -129,25 +190,29 @@ renderNoteItems (n,w) = let
 
 canLinearInProgressBeSlurredTo :: LinearInProgress -> Bool
 canLinearInProgressBeSlurredTo [] = False
-canLinearInProgressBeSlurredTo (nip:_) = canMultiPitchLyBeSlurredTo (nip^._1.pitch)
+canLinearInProgressBeSlurredTo lin = canFirstPlayableBeSlurredTo $ map (^._1.pitch) lin
 
 -- A chord can be slurred to if any lys in it can be.
 canMultiPitchLyBeSlurredTo :: MultiPitchLy -> Bool
-canMultiPitchLyBeSlurredTo (OneLy (ly,_,_)) = canBeSlurredTo ly
-canMultiPitchLyBeSlurredTo (ManyLy xs) = let
+canMultiPitchLyBeSlurredTo [(ly,_,_)] = canBeSlurredTo ly
+canMultiPitchLyBeSlurredTo xs = let
     lys = map (^._1) xs
     in any canBeSlurredTo lys
 
+canFirstPlayableBeSlurredTo :: [MultiPitchLy] -> Bool
+canFirstPlayableBeSlurredTo lys = let 
+    playables = filter (\mply -> any (\ly_a_is -> isPlayable (ly_a_is^._1)) mply) lys
+    in case headMay playables of
+        Nothing -> False
+        Just p -> canMultiPitchLyBeSlurredTo p
+
 {-
-This function will hopefully be integrated into the Ly class soon.
+Yay Playable typeclass
 -}
 canBeSlurredTo :: Ly -> Bool
-canBeSlurredTo (Pitch _) = True
-canBeSlurredTo Rest = False
-canBeSlurredTo (Perc _) = True
-canBeSlurredTo Effect = True
-canBeSlurredTo (Lyric _) = True
-canBeSlurredTo (Grace _) = False
+canBeSlurredTo (Ly a) = case info a of
+    Just i -> i^.slurrable
+    Nothing -> False -- we shouldn't really ask this, but let's go with False for now
 
 {- 
 We "apply" the slurs to a staff (a StaffInProgress), meaning 
@@ -196,8 +261,8 @@ applySlursToLinear enteringSlur existsSlurableFollowing lin =
     applySlursToLinear'h (isInSlur,acc) [] = (isInSlur,[])
     applySlursToLinear'h (isInSlur,acc) (note:notes) = let
         existsSlurableNextNote = case notes of
-            (nextNote:_) -> canMultiPitchLyBeSlurredTo (nextNote^._1.pitch)
             [] -> existsSlurableFollowing 
+            moreNotes -> canFirstPlayableBeSlurredTo $ map (^._1.pitch) moreNotes
             -- second case: only one note remaining in
             -- this linear, so we have to use our given information about what
             -- comes after this.
@@ -207,8 +272,15 @@ applySlursToLinear enteringSlur existsSlurableFollowing lin =
                                                 existsSlurableNextNote 
                                                 thisNoteIsSlurred
         processedNote = modifier note
-        (slurComingFromLinear,remainder) = applySlursToLinear'h (slurComingFromNote,[]) notes
-        in (slurComingFromLinear,processedNote:remainder)
+        (slurComingFromLinear,remainder) = 
+            if shouldProcessThisNote
+            then applySlursToLinear'h (slurComingFromNote,[]) notes
+            else applySlursToLinear'h (enteringSlur,[]) notes
+        shouldProcessThisNote = any isPlayable $ map (^._1) (note^._1.pitch)
+        maybeProcessedNote = if shouldProcessThisNote
+                             then processedNote
+                             else note
+        in (slurComingFromLinear,maybeProcessedNote:remainder)
 
 {-
 Deciding how to mark a slurs is surprisingly tricky.
@@ -257,7 +329,7 @@ renderArt Portato = "-_"
 renderArt Staccatissimo = "-|"
 renderArt Stopped = "-+"
 renderArt Accent = "->"
-
+{-
 renderInStaff :: [InTime (Note MultiPitchLy)] -> String
 renderInStaff mus = concat $ intersperse " " $ map f mus where
     f note = note
@@ -265,7 +337,7 @@ renderInStaff mus = concat $ intersperse " " $ map f mus where
         & renderNoteBodyInStaff
         & renderNoteItems
         & extractRenderedNote
-
+-}
 extractRenderedNote :: NoteInProgress -> String
 extractRenderedNote (n,w) = let
     nonGraceOnly :: String -> String
@@ -288,9 +360,6 @@ xNote n = let
         _            -> "c'"
     in "\\xNote "++fakePitch
 
-renderPitch' :: Pitch -> (Maybe Accidental) -> String
-renderPitch' p acc = renderPitchAcc (p^.pc) acc ++ renderOct (p^.oct)
-
 toStage0 :: Music -> [Music]
 toStage0 mus = (allVoices mus) & map (\v -> mus^.ofLine v)
 
@@ -306,13 +375,13 @@ isChordable it1 it2 = (it1^.dur == it2^.dur) && (it1^.t == it2^.t) &&
     isLyChordable (it2^.val.pitch)
 
 isLyChordable :: Ly -> Bool
-isLyChordable (Pitch _) = True
-isLyChordable (Perc _) = True
-isLyChordable _ = False
+isLyChordable (Ly a) = case info a of
+    Just i -> i^.chordable
+    Nothing -> False -- again, we shouldn't ever use this value...
 
 formChord :: [InTime (Note Ly)] -> InTime LinearNote
-formChord [it] = it & val .~ UniNote (it^.val)
-formChord its = (head its) & val .~ ChordR (its & map (^.val))
+formChord [it] = it & val .~ [(it^.val)]
+formChord its = (head its) & val .~ (its & map (^.val))
 
 combineChords :: Music -> Linear
 combineChords mus = mus 
@@ -321,11 +390,13 @@ combineChords mus = mus
     & map formChord
 
 pitchLN :: LinearNote -> Double
-pitchLN (UniNote n) = pitch2num n
-pitchLN (ChordR ns) = (sum $ map pitch2num ns) / (fromIntegral $ length ns)
+pitchLN ([n]) = pitch2num n
+pitchLN (ns) = (sum $ map pitch2num ns) / (fromIntegral $ length ns)
 
 timePitchSort :: Linear -> Linear
-timePitchSort = sortBy $ \it1 it2 -> (it1^.t) `compare` (it2^.t) <> (pitchLN $ it1^.val) `compare` (pitchLN $ it2^.val)
+timePitchSort = sortBy $ \it1 it2 -> (it1^.t) `compare` (it2^.t) <>
+                             (it1^.val & head & (^.pitch) & isPlayable) `compare` (it2^.val & head & (^.pitch) & isPlayable) <> -- non playable items come first
+                             (pitchLN $ it1^.val) `compare` (pitchLN $ it2^.val)
 
 findPolys :: Linear -> Staff
 findPolys lin = reverse $ foldl f [] (timePitchSort lin) where
@@ -389,8 +460,8 @@ or to count a chord as a single note...testing required.
 heightAndLength :: InTime LinearNote -> (Double,Rational)
 heightAndLength it = let
     lys = case it^.val of
-        UniNote n -> [n^.pitch]
-        ChordR ns -> map (^.pitch) ns
+        [n] -> [n^.pitch]
+        ns -> map (^.pitch) ns
     lyInfo = map heightAndLengthPossibilityOfLy lys
     summedHeight = sum $ map (^._1) lyInfo
     numberOfAverageable = length $ filter (^._2) lyInfo
@@ -406,10 +477,12 @@ containing this Ly in the sum of durations we use to
 calculate the average.
 -}
 heightAndLengthPossibilityOfLy :: Ly -> (Double,Bool)
-heightAndLengthPossibilityOfLy ly = case ly2num ly of
-    Nothing -> (0,False)
-    Just 0 -> (0,False)
-    Just x -> (x,True)
+heightAndLengthPossibilityOfLy (Ly ly) = case info ly of
+    Nothing -> (0,False) -- but probably should be "error"
+    Just i -> case i^.pitchHeight of
+        Nothing -> (0,False)
+        Just 0 -> (0,False)
+        Just x -> (x,True)
 
 scoreToLy :: Stage1 -> String
 scoreToLy score = basicScore (concat $ map (staffFromProgress.applySlursToStaff.staffToProgress) score)
@@ -417,8 +490,8 @@ scoreToLy score = basicScore (concat $ map (staffFromProgress.applySlursToStaff.
 staffInstruments :: StaffInProgress -> [Instrument]
 staffInstruments = let
     fromNoteInProgress (n,_) = case n^.pitch of
-        OneLy (_,_,i) -> [i]
-        ManyLy ly_a_is -> map (^._3) ly_a_is
+        [(_,_,i)] -> [i]
+        ly_a_is -> map (^._3) ly_a_is
     fromLinearInProgress = concatMap fromNoteInProgress
     fromPolyInProgress = concatMap fromLinearInProgress
     fromStaffInProgress = concatMap fromPolyInProgress
@@ -447,8 +520,8 @@ the same except for the pitch, so we only need to look
 at the first one.
 -}
 packChordsIntoMultiPitchNotes :: LinearNote -> (Note MultiPitchLy)
-packChordsIntoMultiPitchNotes (UniNote n) = n & pitch .~ OneLy (n^.pitch,n^.acc,n^.inst)
-packChordsIntoMultiPitchNotes (ChordR ns) = (head ns) & pitch .~ ManyLy (zip3 (map (^.pitch) ns) (map (^.acc) ns) (map (^.inst) ns))
+packChordsIntoMultiPitchNotes [n] = n & pitch .~ [(n^.pitch,n^.acc,n^.inst)]
+packChordsIntoMultiPitchNotes ns = (head ns) & pitch .~ (zip3 (map (^.pitch) ns) (map (^.acc) ns) (map (^.inst) ns))
 
 linToProgress :: Linear -> LinearInProgress
 linToProgress lin = timePitchSort lin 
@@ -463,9 +536,15 @@ linFromProgress lin = lin
     & map extractRenderedNote
     & intersperse " "
     & concat
+    
+{- Prepare the music for rendering -}
+preRender :: Music -> Music
+preRender mus = mus
+    & breakDurationsOverNonPlayables
 
 allRendering :: Music -> String
 allRendering mus = mus
+    & preRender
     & toStage0
     & map combineChords
     & map timePitchSort
@@ -493,10 +572,3 @@ allRenderingForGrace n mus = mus
     & map polyFromProgress
     & intersperse " " 
     & concat
-
-
-writeScore = putStrLn . allRendering
-quickScore m = writeScore $ m & mapOverNotes (\x -> x
-    & line .~ Just "1"
-    & inst .~ Just Instruments.melody
-    )

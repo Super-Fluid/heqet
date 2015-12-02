@@ -4,12 +4,14 @@ import Types
 import List
 import Tools
 import Input.English
+import LyInstances
 
 import Control.Lens
 import Data.List
 import Control.Applicative
 import Data.Maybe
 import Data.Monoid
+import Data.Typeable
 import Safe
 
 -- for assigning clefs
@@ -73,11 +75,23 @@ altoAltTreble = twoClefs Alto Treble [pp| c' |] [pp| b'' |] [pp| b'' |]
 -- property that a Ly that is not a Pitch should always be 'inside'
 -- the allowable range.
 isAbove :: Ly -> Pitch -> Bool
-isAbove (Pitch p) q = p > q
-isAbove _ _ = False
+isAbove (Ly a) q = let 
+    x = cast a :: Maybe LyPitch
+    lp = fromJust x -- not used unless type is right and thus cast succeeded
+                         -- lazyness FTW!
+    (LyPitch p) = lp
+    in if typeOf a == typeOf (LyPitch undefined) 
+       then (pitch2double p) > (pitch2double q)
+       else False
+
 isBelow :: Ly -> Pitch -> Bool
-isBelow (Pitch p) q = p < q
-isBelow _ _ = False
+isBelow (Ly a) q = let 
+    x = cast a :: Maybe LyPitch
+    lp = fromJust x
+    (LyPitch p) = lp
+    in if typeOf a == typeOf (LyPitch undefined)
+       then (pitch2double p) < (pitch2double q)
+       else False
 
 -- for defining playability:
 simpleRange :: Pitch -> Pitch -> Music -> Music
