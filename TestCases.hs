@@ -65,3 +65,11 @@ slurOverBar = let
         & line .~ Just "1"
         & inst .~ Just Instruments.violin
     )
+
+keys = let
+    a = [music| a4 b cs d|] & mapOverNotes (\x -> x & key .~ Just (A,MajorM,Just Natural))
+    b = [music| ef4 f8 ef bf4 a|] & mapOverNotes (\x -> x & key .~ Just (Ds,MajorM,Just Flat))
+    in (a ++ (startMusicAt 4 b)) & mapOverNotes (\x -> x
+        & line .~ Just "1"
+        & inst .~ Just Instruments.violin
+    )
