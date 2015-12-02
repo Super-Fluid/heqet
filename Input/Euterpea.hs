@@ -16,12 +16,15 @@ fromEu (E.Prim (E.Note dur ((pc, oct), nas))) = let
 fromEu (E.Prim (E.Rest dur)) = []
 fromEu (m1 E.:+: m2) = []
 fromEu (m1 E.:=: m2) = fromEu m1 ++ fromEu m2 -- just smoosh them together
-fromEu (E.Modify (E.Tempo tempo) m) = []
-fromEu (E.Modify (E.Transpose p) m) = []
+fromEu (E.Modify (E.Tempo tempo) m) = fromEu m
+fromEu (E.Modify (E.Transpose p) m) = transpose (absPitch2Pitch p) (fromEu m)
 fromEu (E.Modify (E.Instrument inst) m) = []
 fromEu (E.Modify (E.Phrase pas) m) = []
 fromEu (E.Modify (E.Player s) m) = []
 fromEu (E.Modify (E.KeySig pc mode) m) = []
+
+absPitch2Pitch :: E.AbsPitch -> Pitch
+absPitch2Pitch = undefined -- TODO
 
 convertPC :: E.PitchClass -> (PitchClass, Accidental)
 convertPC  E.Cff = (As,DoubleFlat)

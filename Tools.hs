@@ -66,4 +66,7 @@ ly2num (Lyric _) = Nothing
 ly2num (Grace _) = Just 0 
 
 durationOf :: MusicOf a -> Duration
-durationOf m = max $ map (\it -> it^.t + it^.dur) m
+durationOf m = maximum $ map (\it -> it^.t + it^.dur) m
+
+transpose :: Pitch -> Music -> Music
+transpose _ = id -- TODO!!
