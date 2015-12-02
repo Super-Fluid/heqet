@@ -18,13 +18,21 @@ fromEu (m1 E.:+: m2) = []
 fromEu (m1 E.:=: m2) = fromEu m1 ++ fromEu m2 -- just smoosh them together
 fromEu (E.Modify (E.Tempo tempo) m) = fromEu m
 fromEu (E.Modify (E.Transpose p) m) = transpose (absPitch2Pitch p) (fromEu m)
-fromEu (E.Modify (E.Instrument inst) m) = []
+fromEu (E.Modify (E.Instrument i) m) = (fromEu m) & traverse.val.inst .~ Just (getEuInst i)
 fromEu (E.Modify (E.Phrase pas) m) = []
 fromEu (E.Modify (E.Player s) m) = []
-fromEu (E.Modify (E.KeySig pc mode) m) = []
+fromEu (E.Modify (E.KeySig pitchclass mode) m) = (fromEu m) & traverse.val.key .~ Just (convertKey pitchclass mode)
 
 absPitch2Pitch :: E.AbsPitch -> Pitch
-absPitch2Pitch = undefined -- TODO
+absPitch2Pitch = error "not implimented yet" -- TODO
+
+convertKey :: E.PitchClass -> E.Mode -> (PitchClass, Mode, Maybe Accidental)
+convertKey pitchclass mode = let
+	   (pc', acc) = convertPC pitchclass
+	   mode' = case mode of
+	   	 E.Major -> MajorM
+		 E.Minor -> MinorM
+	   in (pc',mode',Just acc)
 
 convertPC :: E.PitchClass -> (PitchClass, Accidental)
 convertPC  E.Cff = (As,DoubleFlat)
@@ -127,11 +135,11 @@ data Articulation
   | Euterpea.Stopped
 
 data InstrumentName
-  = AcousticGrandPiano
-  | BrightAcousticPiano
-  | ElectricGrandPiano
-  | HonkyTonkPiano
-  | RhodesPiano
+  = 
+  | 
+  | 
+  | 
+  | 
   | ChorusedPiano
   | Harpsichord
   | Clavinet
@@ -167,14 +175,14 @@ data InstrumentName
   | SlapBass2
   | SynthBass1
   | SynthBass2
-  | Violin
-  | Viola
-  | Cello
-  | Contrabass
-  | TremoloStrings
-  | PizzicatoStrings
-  | OrchestralHarp
-  | Timpani
+  | 
+  | 
+  | 
+  | 
+ TremoloStrings
+ PizzicatoStrings
+ OrchestralHarp
+ Timpani
   | StringEnsemble1
   | StringEnsemble2
   | SynthStrings1
@@ -183,24 +191,17 @@ data InstrumentName
   | VoiceOohs
   | SynthVoice
   | OrchestraHit
-  | Trumpet
-  | Trombone
-  | Tuba
+  | 
+  | 
+  | 
   | MutedTrumpet
-  | FrenchHorn
+  | 
   | BrassSection
   | SynthBrass1
   | SynthBrass2
-  | SopranoSax
-  | AltoSax
-  | TenorSax
-  | BaritoneSax
-  | Oboe
-  | Bassoon
-  | EnglishHorn
-  | Clarinet
-  | Piccolo
-  | Flute
+  | 
+  | 
+  | 
   | Recorder
   | PanFlute
   | BlownBottle
@@ -260,3 +261,30 @@ data InstrumentName
 
 
 -}
+
+getEuInst :: E.InstrumentName -> Instrument
+getEuInst E.Violin = violin
+getEuInst E.Viola = viola
+getEuInst E.Cello = cello
+getEuInst E.Contrabass = string_bass
+getEuInst E.Trumpet = trumpet
+getEuInst E.FrenchHorn = horn
+getEuInst E.Trombone = trombone
+getEuInst E.Tuba = tuba
+getEuInst E.SopranoSax = soprano_sax
+getEuInst E.AltoSax = alto_sax
+getEuInst E.TenorSax = tenor_sax
+getEuInst E.BaritoneSax = baritone_sax
+getEuInst E.Oboe = oboe
+getEuInst E.Bassoon = bassoon
+--getEuInst E.EnglishHorn
+getEuInst E.Clarinet = clarinet
+--getEuInst E.Piccolo
+getEuInst E.Flute = flute
+getEuInst E.AcousticGrandPiano = piano
+getEuInst E.BrightAcousticPiano = piano
+getEuInst E.ElectricGrandPiano = piano
+getEuInst E.HonkyTonkPiano = piano
+getEuInst E.RhodesPiano = piano
+getEuInst (E.Custom s) = melody & name .~ s
+getEuInst _ = melody
