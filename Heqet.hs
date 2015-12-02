@@ -6,6 +6,7 @@ module Heqet
     , module Tools
     , module Instruments
     , module Types
+    , module Dynamics
     ) where
 
 import Input.English
@@ -18,5 +19,6 @@ import Instruments
 import Assigners
 import Output.FastRender
 import Meters
+import qualified Dynamics
 
 import Control.Lens

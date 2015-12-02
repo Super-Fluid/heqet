@@ -80,3 +80,6 @@ durationOf m = maximum $ map (\it -> it^.t + it^.dur) m
 
 transpose :: Pitch -> Music -> Music
 transpose _ = id -- TODO!!
+
+applyDynamic :: Dynamic -> Music -> Music
+applyDynamic dyn m = m & traverse.val.dynamic .~ Just dyn

@@ -2,6 +2,7 @@ module Input.Euterpea where
 
 import Heqet
 import qualified Euterpea as E
+import qualified Dynamics
 
 import Control.Lens
 
@@ -19,8 +20,9 @@ fromEu (m1 E.:=: m2) = fromEu m1 ++ fromEu m2 -- just smoosh them together
 fromEu (E.Modify (E.Tempo tempo) m) = fromEu m
 fromEu (E.Modify (E.Transpose p) m) = transpose (absPitch2Pitch p) (fromEu m)
 fromEu (E.Modify (E.Instrument i) m) = (fromEu m) & traverse.val.inst .~ Just (getEuInst i)
-fromEu (E.Modify (E.Phrase pas) m) = []
-fromEu (E.Modify (E.Player s) m) = []
+fromEu (E.Modify (E.Phrase pas) m) = foldl (&) (fromEu m) (map applyEuPhraseAttr pas)
+-- apply all phrase attribute application functions
+fromEu (E.Modify (E.Player s) m) = (fromEu m) & traverse.val.line .~ Just s
 fromEu (E.Modify (E.KeySig pitchclass mode) m) = (fromEu m) & traverse.val.key .~ Just (convertKey pitchclass mode)
 
 absPitch2Pitch :: E.AbsPitch -> Pitch
@@ -33,6 +35,37 @@ convertKey pitchclass mode = let
 	   	 E.Major -> MajorM
 		 E.Minor -> MinorM
 	   in (pc',mode',Just acc)
+
+applyEuPhraseAttr :: E.PhraseAttribute -> (Music -> Music)
+applyEuPhraseAttr (E.Dyn dyn) = applyEuDynamic dyn
+applyEuPhraseAttr (E.Tmp tmp) = applyEuTempo tmp
+applyEuPhraseAttr (E.Art art) = applyEuArticulation art
+applyEuPhraseAttr (E.Orn orn) = applyEuOrnament orn
+
+applyEuDynamic :: E.Dynamic -> (Music -> Music)
+applyEuDynamic (E.Accent _) = (& traverse.val.artics %~ (Accent:))
+applyEuDynamic (E.Crescendo _) = id -- TODO
+applyEuDynamic (E.Diminuendo _) = id -- TODO
+applyEuDynamic (E.StdLoudness loud) = applyEuStdLoudness loud
+applyEuDynamic (E.Loudness r) = let loudness = (1 `min` r) `max` 0 -- confine to interval [0,1]
+	       in (& traverse.val.dynamic .~ Just loudness)
+
+applyEuStdLoudness :: E.StdLoudness -> (Music -> Music)
+applyEuStdLoudness E.PPP = applyDynamic Dynamics.ppp
+applyEuStdLoudness E.PP = applyDynamic Dynamics.pp
+applyEuStdLoudness E.P = applyDynamic Dynamics.p
+applyEuStdLoudness E.MP = applyDynamic Dynamics.mp
+applyEuStdLoudness E.SF = applyDynamic Dynamics.f -- ????
+applyEuStdLoudness E.MF = applyDynamic Dynamics.mf
+applyEuStdLoudness E.NF = applyDynamic Dynamics.mf -- nf == mf ???
+applyEuStdLoudness E.FF = applyDynamic Dynamics.ff
+applyEuStdLoudness E.FFF = applyDynamic Dynamics.fff
+
+applyEuTempo :: E.Tempo -> (Music -> Music)
+
+applyEuArticulation :: E.Articulation -> (Music -> Music)
+
+applyEuOrnament :: E.Ornament -> (Music -> Music)
 
 convertPC :: E.PitchClass -> (PitchClass, Accidental)
 convertPC  E.Cff = (As,DoubleFlat)
