@@ -6,8 +6,8 @@ import qualified Dynamics
 
 import Control.Lens
 
-fromEu :: E.Music E.Note1 -> Music
-fromEu (E.Prim (E.Note dur ((pc, oct), nas))) = let 
+fromEu :: E.Music E.Pitch -> Music
+fromEu (E.Prim (E.Note dur (pc, oct))) = let 
        (hegetPC,hegetAcc) = convertPC pc
        n = emptyNote 
        	   & pitch .~ Ly (LyPitch MakePitch { _pc = hegetPC, _oct = oct, _cents = 0 })
@@ -24,6 +24,31 @@ fromEu (E.Modify (E.Phrase pas) m) = foldl (&) (fromEu m) (map applyEuPhraseAttr
 -- apply all phrase attribute application functions
 fromEu (E.Modify (E.Player s) m) = (fromEu m) & traverse.val.line .~ Just s
 fromEu (E.Modify (E.KeySig pitchclass mode) m) = (fromEu m) & traverse.val.key .~ Just (convertKey pitchclass mode)
+
+fromEu1 :: E.Music E.Note1 -> Music
+fromEu1 (E.Prim (E.Note dur ((pc, oct), nas))) = let 
+       (hegetPC,hegetAcc) = convertPC pc
+       n = emptyNote 
+       	   & pitch .~ Ly (LyPitch MakePitch { _pc = hegetPC, _oct = oct, _cents = 0 })
+	   & acc .~ Just hegetAcc
+       it = InTime { _val = n, _dur = dur, _t = 0 }
+       in foldl (&) [it] (map applyEuNoteAttr nas) -- apply all note attributes to the note 
+fromEu1 (E.Prim (E.Rest dur)) = []
+fromEu1 (m1 E.:+: m2) = []
+fromEu1 (m1 E.:=: m2) = fromEu1 m1 ++ fromEu1 m2 -- just smoosh them together
+fromEu1 (E.Modify (E.Tempo tempo) m) = fromEu1 m
+fromEu1 (E.Modify (E.Transpose p) m) = transpose (absPitch2Pitch p) (fromEu1 m)
+fromEu1 (E.Modify (E.Instrument i) m) = (fromEu1 m) & traverse.val.inst .~ Just (getEuInst i)
+fromEu1 (E.Modify (E.Phrase pas) m) = foldl (&) (fromEu1 m) (map applyEuPhraseAttr pas)
+-- apply all phrase attribute application functions
+fromEu1 (E.Modify (E.Player s) m) = (fromEu1 m) & traverse.val.line .~ Just s
+fromEu1 (E.Modify (E.KeySig pitchclass mode) m) = (fromEu1 m) & traverse.val.key .~ Just (convertKey pitchclass mode)
+
+applyEuNoteAttr :: E.NoteAttribute -> (Music -> Music)
+applyEuNoteAttr (E.Volume i) = (& traverse.val.dynamic .~ Just (fromIntegral i / 128))
+applyEuNoteAttr (E.Fingering _) = id -- not supported
+applyEuNoteAttr (E.Dynamics s) = applyNoteCommand "^\\markup{dynamic: "++s++"}" -- make better!
+applyEuNoteAttr (E.Params _) = id -- ???
 
 absPitch2Pitch :: E.AbsPitch -> Pitch
 absPitch2Pitch = error "not implimented yet" -- TODO
@@ -139,7 +164,7 @@ convertPC  E.Bs = (C,Sharp)
 convertPC  E.Bss = (Cs,DoubleSharp)
 
 applicableAttribute :: E.NoteAttribute -> (Note a -> Note a)
-applicableAttribute (E.Volume i) = (& dynamic .~ Just (fromIntegral i / 127))
+applicableAttribute (E.Volume i) = (& dynamic .~ Just (fromIntegral i / 128))
 applicableAttribute (E.Fingering i) = (& noteCommands %~ (("-"++show i):))
 applicableAttribute (E.Dynamics s) = (& noteCommands %~ (("-"++show s):))
 applicableAttribute (E.Params ds) = (& noteCommands %~ (("-\"Params:"++show ds++"\""):))
