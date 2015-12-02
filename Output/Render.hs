@@ -19,8 +19,6 @@ import Data.Monoid
 import Data.Ord
 import Safe
 
-import Debug.Trace
-
 instance Renderable LyPitch where
     renderInStaff n (LyPitch p) = renderPitchAcc (p^.pc) (n^.acc) ++ renderOct (p^.oct)
     getMarkup _ = []
