@@ -10,6 +10,7 @@ import Data.List
 import Control.Applicative
 import Data.Maybe
 import Data.Monoid
+import Data.Ord
 import Safe
 
 mapOverNotes :: (Note a -> Note a) -> MusicOf a -> MusicOf a
@@ -74,12 +75,29 @@ ly2num (Grace _) = Just 0
 ly2num _ = Nothing
 -}
 
-
-durationOf :: MusicOf a -> Duration
-durationOf m = maximum $ map (\it -> it^.t + it^.dur) m
-
 transpose :: Pitch -> Music -> Music
 transpose _ = id -- TODO!!
 
+firstNote :: Lens' Music Music
+firstNote = lens (\its -> let
+	    playables = (filter (\it -> it^.val.pitch & isPlayable) its)
+	    first = minimumBy (comparing (^.t)) playables
+	  in case playables of
+	     [] -> []
+	     _ -> [first]
+	  ) (++) 
+
 applyDynamic :: Dynamic -> Music -> Music
 applyDynamic dyn m = m & traverse.val.dynamic .~ Just dyn
+
+applyArt :: SimpleArticulation -> Music -> Music
+applyArt art m = m & traverse.val.artics %~ (art:)
+
+applyNoteCommand :: NoteCommand -> Music -> Music
+applyNoteCommand ni = (& firstNote.traverse.val.noteCommands %~ (appendNI ni))
+
+applyNoteCommandToAll :: NoteCommand -> Music -> Music
+applyNoteCommandToAll ni = (& traverse.val.noteCommands %~ (appendNI ni))
+
+appendNI :: NoteCommand -> [NoteCommand] -> [NoteCommand]
+appendNI = (:) -- TODO

@@ -43,12 +43,12 @@ applyEuPhraseAttr (E.Art art) = applyEuArticulation art
 applyEuPhraseAttr (E.Orn orn) = applyEuOrnament orn
 
 applyEuDynamic :: E.Dynamic -> (Music -> Music)
-applyEuDynamic (E.Accent _) = (& traverse.val.artics %~ (Accent:))
+applyEuDynamic (E.Accent _) = applyArt Accent
 applyEuDynamic (E.Crescendo _) = id -- TODO
 applyEuDynamic (E.Diminuendo _) = id -- TODO
 applyEuDynamic (E.StdLoudness loud) = applyEuStdLoudness loud
 applyEuDynamic (E.Loudness r) = let loudness = (1 `min` r) `max` 0 -- confine to interval [0,1]
-	       in (& traverse.val.dynamic .~ Just loudness)
+	       in (& traverse.val.dynamic .~ Just (fromRational loudness))
 
 applyEuStdLoudness :: E.StdLoudness -> (Music -> Music)
 applyEuStdLoudness E.PPP = applyDynamic Dynamics.ppp
@@ -62,10 +62,44 @@ applyEuStdLoudness E.FF = applyDynamic Dynamics.ff
 applyEuStdLoudness E.FFF = applyDynamic Dynamics.fff
 
 applyEuTempo :: E.Tempo -> (Music -> Music)
+applyEuTempo _ = id -- TODO
 
 applyEuArticulation :: E.Articulation -> (Music -> Music)
+applyEuArticulation (E.Staccato _) = applyArt Staccato
+applyEuArticulation (E.Legato _) = id -------------------------------
+applyEuArticulation (E.Slurred _) = id --------------------------------
+applyEuArticulation (E.Tenuto) = applyArt Tenuto
+applyEuArticulation (E.Marcato) = applyArt Marcato
+applyEuArticulation (E.Pedal) = id -- TODO
+applyEuArticulation (E.Fermata) = applyNoteCommand "\\fermata"
+applyEuArticulation (E.FermataDown) = applyNoteCommand "\\fermata"
+ -- same as fermata; orientation of symbols is not within the scope of Euterpea
+applyEuArticulation (E.Breath) = id -- not sure how to apply a breath mark...
+applyEuArticulation (E.DownBow) = applyNoteCommand "\\downbow"
+applyEuArticulation (E.UpBow) = applyNoteCommand "\\upbow"
+applyEuArticulation (E.Harmonic) = applyNoteCommand "\\flagolet"
+applyEuArticulation (E.Pizzicato) = id -- TODO
+applyEuArticulation (E.LeftPizz) = id -- TODO
+applyEuArticulation (E.BartokPizz) = id -- TODO
+applyEuArticulation (E.Swell) = applyNoteCommand "\\espressivo"
+applyEuArticulation (E.Wedge)  = applyArt Marcato -- right?
+applyEuArticulation (E.Thumb) = applyNoteCommand "\\thumb"
+applyEuArticulation (E.Stopped) = applyArt Stopped
 
 applyEuOrnament :: E.Ornament -> (Music -> Music)
+applyEuOrnament (E.Trill) = applyNoteCommand "\\trill"
+applyEuOrnament (E.Mordent) = applyNoteCommand "\\prall"
+applyEuOrnament (E.InvMordent) = applyNoteCommand "\\mordent"
+applyEuOrnament (E.DoubleMordent) = applyNoteCommand "\\prallprall"
+applyEuOrnament (E.Turn) = applyNoteCommand "\\turn"
+applyEuOrnament (E.TrilledTurn) = id -- TODO
+applyEuOrnament (E.ShortTrill) = applyNoteCommand "\\trill" -- make different from trill?
+applyEuOrnament (E.Arpeggio) = id -- TODO
+applyEuOrnament (E.ArpeggioUp) = id -- TODO
+applyEuOrnament (E.ArpeggioDown) = id --TODO
+applyEuOrnament (E.Instruction s) = applyNoteCommand $ "\\markup{"++s++"}"
+applyEuOrnament (E.Head head) = id -- probably not supported
+applyEuOrnament (E.DiatonicTrans i) = id -- TODO
 
 convertPC :: E.PitchClass -> (PitchClass, Accidental)
 convertPC  E.Cff = (As,DoubleFlat)
@@ -110,62 +144,37 @@ applicableAttribute (E.Fingering i) = (& noteCommands %~ (("-"++show i):))
 applicableAttribute (E.Dynamics s) = (& noteCommands %~ (("-"++show s):))
 applicableAttribute (E.Params ds) = (& noteCommands %~ (("-\"Params:"++show ds++"\""):))
 
+getEuInst :: E.InstrumentName -> Instrument
+getEuInst E.Violin = violin
+getEuInst E.Viola = viola
+getEuInst E.Cello = cello
+getEuInst E.Contrabass = string_bass
+getEuInst E.Trumpet = trumpet
+getEuInst E.FrenchHorn = horn
+getEuInst E.Trombone = trombone
+getEuInst E.Tuba = tuba
+getEuInst E.SopranoSax = soprano_sax
+getEuInst E.AltoSax = alto_sax
+getEuInst E.TenorSax = tenor_sax
+getEuInst E.BaritoneSax = baritone_sax
+getEuInst E.Oboe = oboe
+getEuInst E.Bassoon = bassoon
+--getEuInst E.EnglishHorn
+getEuInst E.Clarinet = clarinet
+--getEuInst E.Piccolo
+getEuInst E.Flute = flute
+getEuInst E.AcousticGrandPiano = piano
+getEuInst E.BrightAcousticPiano = piano
+getEuInst E.ElectricGrandPiano = piano
+getEuInst E.HonkyTonkPiano = piano
+getEuInst E.RhodesPiano = piano
+getEuInst (E.Custom s) = melody & name .~ s
+getEuInst _ = melody
+
+
 {-
 
-data PhraseAttribute
-  = Dyn Euterpea.Dynamic
-  | Tmp Euterpea.Tempo
-  | Art Articulation
-  | Orn Ornament
-
-data Euterpea.Dynamic
-  = Euterpea.Accent Rational
-  | Crescendo Rational
-  | Diminuendo Rational
-  | StdLoudness StdLoudness
-  | Loudness Rational
-
 data Euterpea.Tempo = Ritardando Rational | Accelerando Rational
-
-Euterpea.Note Dur a | Euterpea.Rest Dur
-
-data Ornament
-  = Trill
-  | Mordent
-  | InvMordent
-  | DoubleMordent
-  | Turn
-  | TrilledTurn
-  | ShortTrill
-  | Arpeggio
-  | ArpeggioUp
-  | ArpeggioDown
-  | Instruction String
-  | Head NoteHead
-  | DiatonicTrans Int
-
-data StdLoudness = PPP | PP | P | MP | SF | MF | NF | FF | FFF
-
-data Articulation
-  = Euterpea.Staccato Rational
-  | Legato Rational
-  | Slurred Rational
-  | Euterpea.Tenuto
-  | Euterpea.Marcato
-  | Pedal
-  | Fermata
-  | FermataDown
-  | Breath
-  | DownBow
-  | UpBow
-  | Harmonic
-  | Pizzicato
-  | LeftPizz
-  | BartokPizz
-  | Swell
-  | Wedge
-  | Thumb
-  | Euterpea.Stopped
 
 data InstrumentName
   = 
@@ -294,30 +303,3 @@ data InstrumentName
 
 
 -}
-
-getEuInst :: E.InstrumentName -> Instrument
-getEuInst E.Violin = violin
-getEuInst E.Viola = viola
-getEuInst E.Cello = cello
-getEuInst E.Contrabass = string_bass
-getEuInst E.Trumpet = trumpet
-getEuInst E.FrenchHorn = horn
-getEuInst E.Trombone = trombone
-getEuInst E.Tuba = tuba
-getEuInst E.SopranoSax = soprano_sax
-getEuInst E.AltoSax = alto_sax
-getEuInst E.TenorSax = tenor_sax
-getEuInst E.BaritoneSax = baritone_sax
-getEuInst E.Oboe = oboe
-getEuInst E.Bassoon = bassoon
---getEuInst E.EnglishHorn
-getEuInst E.Clarinet = clarinet
---getEuInst E.Piccolo
-getEuInst E.Flute = flute
-getEuInst E.AcousticGrandPiano = piano
-getEuInst E.BrightAcousticPiano = piano
-getEuInst E.ElectricGrandPiano = piano
-getEuInst E.HonkyTonkPiano = piano
-getEuInst E.RhodesPiano = piano
-getEuInst (E.Custom s) = melody & name .~ s
-getEuInst _ = melody
