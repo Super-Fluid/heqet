@@ -6,6 +6,7 @@ import Input.English
 import Tools
 import qualified Instruments
 import Types
+import Meters
 
 import Control.Lens
 

@@ -32,7 +32,13 @@ instKind :: String -> Lens' Music Music
 instKind v = filteringBy (\it -> ((^.kind) <$> it^.val.inst) == Just v)
 
 timeSort :: [InTime a] -> [InTime a]
-timeSort = sortBy $ \it1 it2 -> (it1^.t) `compare` (it2^.t) 
+timeSort = sortBy $ \it1 it2 -> (it1^.t) `compare` (it2^.t)
+
+getEndTime :: Music -> Duration
+getEndTime its = maximum $ map (\it -> (it^.t) + (it^.dur)) (filter (\it -> it^.val.pitch & isPlayable) its)
+
+getStartTime :: Music -> Duration
+getStartTime its = minimum $ map (\it -> (it^.t)) (filter (\it -> it^.val.pitch & isPlayable) its)
 
 {-
 takeMusic :: PointInTime -> Lens' Music Music
