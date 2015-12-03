@@ -68,7 +68,11 @@ m128 :: MMeter
 m128 = (concat [measure,beat,beat2dot,beat3dot,beat4dot], 6)
 
 assignMeter :: (Music,Duration) -> Music -> Music
-assignMeter (meter,duration) music = music ++ (meterTrack $ getStartTime music) where
+assignMeter = assignMeterWithLine "all"
+
+assignMeterWithLine :: String -> (Music,Duration) -> Music -> Music
+assignMeterWithLine s (rawmeter,duration) music = music ++ (meterTrack $ getStartTime music) where
+    meter = assignLine s rawmeter
     endTime = getEndTime music
     meterTrack :: PointInTime -> Music
     meterTrack p = 

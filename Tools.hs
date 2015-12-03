@@ -23,6 +23,12 @@ startMusicAt pt mus = fst $ foldl f ([],pt) mus where
 startMusicAtZero :: MusicOf a -> MusicOf a
 startMusicAtZero = startMusicAt 0
 
+assignLine :: String -> Music -> Music
+assignLine s m = m & traverse.val.line .~ Just s
+
+eraseLine :: Music -> Music
+eraseLine m = m & traverse.val.line .~ Nothing
+
 ofLine :: String -> Lens' Music Music
 ofLine v = filteringBy (\it -> it^.val.line == Just v)
 
