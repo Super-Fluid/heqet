@@ -72,6 +72,9 @@ instance Renderable LyMeterEvent where
     renderInStaff _ (LyMeterEvent (Meter num denom)) = "\\time " ++ show num ++ "/" ++ show denom ++ " "
     getMarkup _ = []
 
+-- "PRE-RENDERING"
+-- fixing errors, spelling durations, stuff which always has to be done
+
 {- If a note extends over a non-playable note,
 convert it into two notes tied together 
 -}
@@ -95,6 +98,15 @@ breakDurationsAtPoint point mus = concatMap breakNote mus where
 renderPitchAcc :: PitchClass -> (Maybe Accidental) -> String
 renderPitchAcc pc (Just acc) = fromJustNote "renderPitchAcc (with acc)" $ lookup (pc,acc) (map swap Tables.en)
 renderPitchAcc pc Nothing = fromJustNote "renderPitchAcc (no acc)" $ lookup pc (map (\((p,a),s) -> (p,s)) (map swap Tables.en))
+
+-- if there's no line information, put everything on line "1"
+fixLines :: Music -> Music
+fixLines m = let
+    lines = allVoices m
+    in case lines of
+        [] -> assignLine "1" m
+        ["all"] -> assignLine "1" m
+        _ -> m
 
 commonDurations :: [(Duration,String)]
 commonDurations = [
@@ -590,6 +602,7 @@ linFromProgress lin = lin
 {- Prepare the music for rendering -}
 preRender :: Music -> Music
 preRender mus = mus
+    & fixLines
     & breakDurationsOverNonPlayables
 
 allRendering :: Music -> String
