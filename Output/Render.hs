@@ -530,7 +530,10 @@ heightAndLengthPossibilityOfLy (Ly ly) = case info ly of
         Just x -> (x,True)
 
 scoreToLy :: Stage1 -> String
-scoreToLy score = basicScore (concat $ map (staffFromProgress.applySlursToStaff.staffToProgress) score)
+scoreToLy score = basicScore (concat $ map (staffFromProgress.
+                                            placeClefChanges.
+                                            applySlursToStaff.
+                                            staffToProgress) score)
 
 staffInstruments :: StaffInProgress -> [Instrument]
 staffInstruments = let
@@ -573,6 +576,24 @@ extractStaffEvent (n, _) = let
     ((Ly a,_,_):_) -> renderInStaff n a
         -- we only care about the first one because there should only be one
 
+placeClefChanges :: StaffInProgress -> StaffInProgress
+placeClefChanges = placeClefChanges'h Nothing where
+    placeClefChanges'h :: (Maybe Clef) -> StaffInProgress -> StaffInProgress
+    placeClefChanges'h _ [] = []
+    placeClefChanges'h c ((StaffEventInProgress e):polys) = 
+        (StaffEventInProgress e):(placeClefChanges'h c polys)
+    placeClefChanges'h c (poly@(VoicesInProgress lins):polys) = let
+        changeClef :: Clef -> PolyInProgress
+        changeClef c = (StaffEventInProgress ((emptyNote & pitch .~ [(Ly (LyClefEvent c),Nothing,Nothing)]), emptyWrittenNote))
+        newClef = (head.head $ lins) ^._1.clef 
+            -- poly should have >=1 voice, lin should have >=1 notes
+        in case newClef of
+            Nothing -> poly:(placeClefChanges'h c polys) -- but every note should have a clef...
+            Just new -> case c of
+                Nothing -> (changeClef new):poly:(placeClefChanges'h (Just new) polys)
+                Just old -> if old == new
+                            then poly:(placeClefChanges'h c polys)
+                            else (changeClef new):poly:(placeClefChanges'h (Just new) polys)
 {-
 Pack the multiple notes in a ChordR into
 a single note with multiple pitches.

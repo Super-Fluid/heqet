@@ -232,6 +232,16 @@ data WrittenNote = WrittenNote {
     }
     deriving (Show)
 
+emptyWrittenNote = WrittenNote { 
+      _preceeding = []
+    , _preceedingNoteItems = []
+    , _body = ""
+    , _duration = 0
+    , _noteItems = []
+    , _following = []
+    , _graceNoteKludge  = False
+    }
+
 type MultiPitchLy = [(Ly,Maybe Accidental,Maybe Instrument)]
 type NoteInProgress = (Note MultiPitchLy, WrittenNote)
 type LinearInProgress = [NoteInProgress]

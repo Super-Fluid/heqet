@@ -40,7 +40,8 @@ missingdur = [music| c1 d |] & mapOverNotes (\x -> x
 
 basstreble = [music| c2. d4 ef8 g c' d' ef'4 g' c''2 ef''4. c''16 r8 c8-> |] & mapOverNotes (\x -> x
     & inst .~ Just Instruments.horn
-    )
+    ) 
+    & Instruments.assignAllConcertClefs
 
 slur = [music| c''4.-( e''8-( \grace { c''16 } g''2 \grace { c''16-( } c''1 c''4.-( r4 e''8-( g''2 << { e''4 e'' } \\ { c''4-( b' } >> <a' e''>1-( <c'' e''>  \grace { c''16-( d''16 } e''2 |] & mapOverNotes (\x -> x
     & inst .~ Just Instruments.violin
