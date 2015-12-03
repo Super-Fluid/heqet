@@ -85,7 +85,7 @@ firstNote = lens (\its -> let
 	  in case playables of
 	     [] -> []
 	     _ -> [first]
-	  ) (++) 
+	  ) (parM) 
 
 applyDynamic :: Dynamic -> Music -> Music
 applyDynamic dyn m = m & traverse.val.dynamic .~ Just dyn
@@ -103,3 +103,9 @@ appendNI :: NoteCommand -> [NoteCommand] -> [NoteCommand]
 appendNI nc ncs = if nc `elem` ncs
 	    	  then ncs
 		  else (nc:ncs)
+
+-- join two pieces of Music in PARALLEL
+-- might be revised if we reintroduce the
+-- contraint that Music be in chronological order.
+parM :: Music -> Music -> Music
+parM = (++)
