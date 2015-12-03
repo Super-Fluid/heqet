@@ -37,6 +37,20 @@ assignToInstrument i m = m & traverse.val.inst .~ Just i
 annotateForInstrument :: Instrument -> Music -> Music
 annotateForInstrument i m = annotateAllForInstrument i (m^.instKind (i^.kind))
 
+assignAllConcertClefs :: Music -> Music
+assignAllConcertClefs m = let
+    instruments = whatInstruments m
+    functions = map assignConcertClefsForInstrument instruments
+    in foldl (&) m functions
+
+-- assigns clefs playability for all notes
+assignConcertClefsAllForInstrument :: Instrument -> Music -> Music
+assignConcertClefsAllForInstrument i m = (i^.assignConcertClefs) m
+
+-- assigns clefs for note already assigned for that KIND of instrument
+assignConcertClefsForInstrument :: Instrument -> Music -> Music
+assignConcertClefsForInstrument i m = assignConcertClefsAllForInstrument i (m^.instKind (i^.kind))
+
 melody = Instrument { 
       _midiInstrument = "acoustic grand"
     , _pickUpTime = 0
