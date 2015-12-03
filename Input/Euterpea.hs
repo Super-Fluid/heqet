@@ -47,7 +47,7 @@ fromEu1 (E.Modify (E.KeySig pitchclass mode) m) = (fromEu1 m) & traverse.val.key
 applyEuNoteAttr :: E.NoteAttribute -> (Music -> Music)
 applyEuNoteAttr (E.Volume i) = (& traverse.val.dynamic .~ Just (fromIntegral i / 128))
 applyEuNoteAttr (E.Fingering _) = id -- not supported
-applyEuNoteAttr (E.Dynamics s) = applyNoteCommand "^\\markup{dynamic: "++s++"}" -- make better!
+applyEuNoteAttr (E.Dynamics s) = applyNoteCommand $ "^\\markup{dynamic: "++s++"}" -- make better!
 applyEuNoteAttr (E.Params _) = id -- ???
 
 absPitch2Pitch :: E.AbsPitch -> Pitch
