@@ -225,7 +225,7 @@ data WrittenNote = WrittenNote {
 type MultiPitchLy = [(Ly,Maybe Accidental,Maybe Instrument)]
 type NoteInProgress = (Note MultiPitchLy, WrittenNote)
 type LinearInProgress = [NoteInProgress]
-type PolyInProgress = [LinearInProgress]
+data PolyInProgress = StaffEventInProgress NoteInProgress | VoicesInProgress [LinearInProgress]
 type StaffInProgress = [PolyInProgress]
 type ScoreInProgress = [StaffInProgress]
 

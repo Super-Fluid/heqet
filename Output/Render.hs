@@ -223,13 +223,19 @@ marks) to notate that articulation.
 applySlursToStaff :: StaffInProgress -> StaffInProgress
 applySlursToStaff staff = applySlursToStaff'h [] staff where
     applySlursToStaff'h _ [] = []
-    applySlursToStaff'h slurIns (poly:polys) = let
-        slurableOuts = case polys of
-            [] -> [] -- No more music so nothing for a slur to connect to
-            (lins:_) -> map canLinearInProgressBeSlurredTo lins
-        (slurOuts,processedPoly) = applySlursToPoly slurIns slurableOuts poly
-        processedRemainder = applySlursToStaff'h slurOuts polys
-        in processedPoly:processedRemainder
+    applySlursToStaff'h slurIns (poly:polys) = case poly of
+        (VoicesInProgress lins) -> let
+            slurableOuts = canNextPlayablePolyBeSlurredTo polys
+            (slurOuts,processedPoly) = applySlursToPoly slurIns slurableOuts lins
+            processedRemainder = applySlursToStaff'h slurOuts polys
+            in (VoicesInProgress processedPoly) : processedRemainder
+        (StaffEventInProgress _) -> poly : (applySlursToStaff'h slurIns polys)
+
+canNextPlayablePolyBeSlurredTo :: [PolyInProgress] -> [Bool]
+canNextPlayablePolyBeSlurredTo [] = []
+canNextPlayablePolyBeSlurredTo (p:ps) = case p of 
+    (VoicesInProgress lins) -> map canLinearInProgressBeSlurredTo lins
+    (StaffEventInProgress _) -> canNextPlayablePolyBeSlurredTo ps
 
 {- 
 This function basically applies slurs to each of the Linears
@@ -237,8 +243,13 @@ in the Poly. It takes slur info from before and after much like
 applySlursToLinear (see below). We ensure that the given lists
 are big enough for the number of Linears we have by padding the
 lists we get us with False.
+
+Note that this function actually takes a list of lins,
+not a poly, as there would be no point applying slurs to 
+a staff event, and that case is handled in applySlursToStaff
+above.
 -}
-applySlursToPoly :: [Bool] -> [Bool] -> PolyInProgress -> ([Bool], PolyInProgress)
+applySlursToPoly :: [Bool] -> [Bool] -> [LinearInProgress] -> ([Bool], [LinearInProgress])
 applySlursToPoly slurIns slurableOuts lins = let
     falsePad = replicate Output.LilypondSettings.maxNumberOfVoices False
     zippedData = zip3 (slurIns ++ falsePad) (slurableOuts ++ falsePad) lins
@@ -407,21 +418,28 @@ findPolys lin = reverse $ foldl f [] (timePitchSort lin) where
         else [StaffEvent it]
     f (current:past) it = 
         if isLinearNotePlayable (it^.val)
-        then (map Voices $ g current it)++past
+        {- If we try to add a playable note,
+            we should either start with the current Poly and try to
+            fit it in, or we should make a new column if the current one
+            was a StaffEvent 
+        -}
+        then case current of
+            Voices lins -> (map Voices $ g lins it)++past
+            StaffEvent e -> (map Voices $ g [] it)++[current]++past
         else (StaffEvent it):current:past
     -- g is only for fitting in playable notes
     g :: [Linear] -> (InTime LinearNote) -> [[Linear]]
     g [] it = [ emptyCol & atIndex 0 .~ [it] ]
     g current it = let (voiceN,succeeded) = tryToFit it current
         in if not succeeded
-           then current -- discard the voices that don't fit (TODO: write error)
+           then [current] -- discard the voices that don't fit (TODO: write error)
            else if voiceN == 0
                 then if all (checkLineFit it) current
-                     then (emptyCol & atIndex 0 .~ [it]):current
-                     else (current & atIndex 0 %~ (it:))
-                else (current & atIndex voiceN %~ (it:))
+                     then (emptyCol & atIndex 0 .~ [it]):[current]
+                     else [(current & atIndex 0 %~ (it:))]
+                else [(current & atIndex voiceN %~ (it:))]
     emptyCol = replicate Output.LilypondSettings.maxNumberOfVoices []
-    tryToFit :: (InTime LinearNote) -> Polyphony -> (Int,Bool)
+    tryToFit :: (InTime LinearNote) -> [Linear] -> (Int,Bool)
     tryToFit it col = tryToFitHelper $ checkFit it col
     tryToFitHelper Nothing = (undefined,False)
     tryToFitHelper (Just i) = (i,True)
@@ -439,12 +457,13 @@ for something like 1,3,5,2,4,6. Not sure if that's the right order
 of the evens..
 -}
 sortPoly :: Polyphony -> Polyphony
-sortPoly lins = let
+sortPoly (Voices lins) = let
     sorted = reverse $ sortBy (comparing heightOfLinear) lins -- reverse so high to low
     indexed = sorted `zip` [1..] -- voices are 1-indexed
     odds  = map (^._1) $ filter (\(_,i) -> odd  i) indexed
     evens = map (^._1) $ filter (\(_,i) -> even i) indexed
-    in odds ++ evens
+    in Voices $ odds ++ evens
+sortPoly staffEvent = staffEvent
 
 {- compute the "average pitch" of
 a Linear, ignoring things that don't make 
@@ -507,7 +526,8 @@ staffInstruments = let
         [(_,_,i)] -> [i]
         ly_a_is -> map (^._3) ly_a_is
     fromLinearInProgress = concatMap fromNoteInProgress
-    fromPolyInProgress = concatMap fromLinearInProgress
+    fromPolyInProgress (VoicesInProgress lins) = concatMap fromLinearInProgress lins
+    fromPolyInProgress (StaffEventInProgress _) = []
     fromStaffInProgress = concatMap fromPolyInProgress
     in catMaybes . nub . fromStaffInProgress
 
@@ -518,12 +538,28 @@ staffFromProgress :: StaffInProgress -> String
 staffFromProgress staff = basicStaff (staffInstruments staff) (concat $ intersperse " " $ map polyFromProgress staff)
 
 polyToProgress :: Polyphony -> PolyInProgress
-polyToProgress = map linToProgress
+polyToProgress (Voices lins) = VoicesInProgress $ map linToProgress lins
+polyToProgress (StaffEvent e) = StaffEventInProgress e' where
+    lys = e^..val.traverse.pitch
+    multi :: MultiPitchLy
+    multi = map (\ly -> (ly,Nothing,Nothing)) lys
+    eWithMulti :: InTime (Note MultiPitchLy)
+    eWithMulti = e & val .~ (head (e^.val) & pitch .~ multi)
+    e' = startRenderingNote eWithMulti
 
 polyFromProgress :: PolyInProgress -> String
-polyFromProgress [] = error "empty polyphony"
-polyFromProgress [lin] = linFromProgress lin
-polyFromProgress lins = " << " ++ (concat $ intersperse "\\\\" $ map (" { "++) $ map (++" } ") $ map linFromProgress lins) ++ ">> "
+polyFromProgress (VoicesInProgress []) = error "empty polyphony"
+polyFromProgress (VoicesInProgress [lin]) = linFromProgress lin
+polyFromProgress (VoicesInProgress lins) = " << " ++ (concat $ intersperse "\\\\" $ map (" { "++) $ map (++" } ") $ map linFromProgress lins) ++ ">> "
+polyFromProgress (StaffEventInProgress e) = extractStaffEvent e
+
+extractStaffEvent :: NoteInProgress -> String
+extractStaffEvent (n, _) = let 
+    multi = n^.pitch 
+    in case multi of
+    [] -> "" -- should not happen
+    ((Ly a,_,_):_) -> renderInStaff n a
+        -- we only care about the first one because there should only be one
 
 {-
 Pack the multiple notes in a ChordR into
@@ -564,9 +600,17 @@ allRendering mus = mus
     & map timePitchSort
     & map findPolys
     & (map.map) sortPoly -- puts voices in pitch order
-    & (map.map.map) reverse -- put each Linear in order
-    & (map.map) (filter (not.null)) -- remove empty Linears from each Polyphony
+    & (map.map) reverseLinearsInPoly -- put each Linear in order
+    & (map.map) removeEmptyLinears -- remove empty Linears from each Polyphony
     & scoreToLy
+
+reverseLinearsInPoly :: Polyphony -> Polyphony
+reverseLinearsInPoly (Voices lins) = Voices $ map reverse lins
+reverseLinearsInPoly staffEvent = staffEvent
+
+removeEmptyLinears :: Polyphony -> Polyphony
+removeEmptyLinears (Voices lins) = Voices $ filter (not.null) lins
+removeEmptyLinears staffEvent = staffEvent
 
 {- 
 Grace notes are like a Staff with no key changes or time signatures
@@ -579,8 +623,8 @@ allRenderingForGrace n mus = mus
     & timePitchSort
     & findPolys
     & (map) sortPoly -- puts voices in pitch order
-    & (map.map) reverse -- put each Linear in order
-    & (map) (filter (not.null)) -- remove empty Linears from each Polyphony
+    & (map) reverseLinearsInPoly -- put each Linear in order
+    & (map) removeEmptyLinears -- remove empty Linears from each Polyphony
     & map polyToProgress
     & applySlursToStaff
     & map polyFromProgress
