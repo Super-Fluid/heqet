@@ -8,6 +8,34 @@ import Input.English
 import Assigners
 
 import Control.Lens
+import Data.Maybe
+import Data.List
+
+sameKind :: Instrument -> Instrument -> Bool
+sameKind i1 i2 = (i1^.kind) == (i2^.kind)
+
+sameName :: Instrument -> Instrument -> Bool
+sameName i1 i2 = (i1^.name) == (i2^.name)
+
+whatInstruments :: Music -> [Instrument]
+whatInstruments m = nubBy sameKind . catMaybes $ (map (^.val.inst) m)
+
+annotateAllPlayability :: Music -> Music
+annotateAllPlayability m = let
+    instruments = whatInstruments m
+    functions = map annotateForInstrument instruments
+    in foldl (&) m functions
+
+-- evaluates playability for all notes
+annotateAllForInstrument :: Instrument -> Music -> Music
+annotateAllForInstrument i m = (i^.annotatePlayability) m
+
+assignToInstrument :: Instrument -> Music -> Music
+assignToInstrument i m = m & traverse.val.inst .~ Just i
+
+-- evaluates playability for note already assigned for that KIND of instrument
+annotateForInstrument :: Instrument -> Music -> Music
+annotateForInstrument i m = annotateAllForInstrument i (m^.instKind (i^.kind))
 
 melody = Instrument { 
       _midiInstrument = "acoustic grand"
