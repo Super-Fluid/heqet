@@ -1,6 +1,8 @@
 {-# LANGUAGE TemplateHaskell
 , DeriveFunctor
 , ExistentialQuantification
+, FlexibleInstances
+, OverlappingInstances
 , DeriveDataTypeable #-}
 
 module Types where
@@ -155,6 +157,16 @@ class Playable a where
     -- need playable things. Unfortunately, I can't figure out a way to
     -- filter things by class; there's no "Classable" like there is Typeable.
 
+{-
+This is a default instance that might be overlapped by 
+instances for specific types of a. So if your new type
+is not playable (it does not take up time or participate
+in slurring) then you don't need to declare a 
+Playable instance for it.
+-}
+instance Playable a where
+    info = const Nothing
+
 data PlayInfo = PlayInfo {
     _slurrable :: Bool
   , _chordable :: Bool
@@ -190,9 +202,6 @@ data LyNull = LyNull
 instance Renderable LyNull where
     renderInStaff _ _ = ""
     getMarkup _ = []
-
-instance Playable LyNull where
-    info _ = Nothing
 
 type MusicOf a = [(InTime (Note a))] -- Invariant: must be sorted chronologically
 type Music = MusicOf Ly

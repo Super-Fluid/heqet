@@ -37,18 +37,3 @@ instance Playable LyGrace where
     , _chordable = False
     , _pitchHeight = Just 0 -- IMPROVE!
     }
-
-instance Playable LyMeasureEvent where
-    info _ = Nothing
-
-instance Playable LyBeatEvent where
-    info _ = Nothing
-
-instance Playable LyKeyEvent where
-    info _ = Nothing
-
-instance Playable LyClefEvent where
-    info _ = Nothing
-
-instance Playable LyMeterEvent where
-    info _ = Nothing
