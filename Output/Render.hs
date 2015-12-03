@@ -372,7 +372,7 @@ xNote n = let
     in "\\xNote "++fakePitch
 
 toStage0 :: Music -> [Music]
-toStage0 mus = (allVoices mus) & map (\v -> mus^.ofLine v)
+toStage0 mus = (allVoices mus) & map (\v -> (mus^.ofLine v) ++ (mus^.ofLine "all"))
 
 allVoices :: Music -> [String]
 allVoices = catMaybes.(map head).group.sort.(map (^.val.line))
