@@ -143,6 +143,7 @@ class Renderable a where
 
 class Playable a where
     info :: a -> Maybe PlayInfo
+    info = const Nothing
     -- What's playable? Notes are, key changes aren't.
     -- Can a slur pass through it? If so, then it's not playable.
 
