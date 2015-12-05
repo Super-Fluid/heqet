@@ -646,7 +646,7 @@ extractFirstPitch [] = error "empty quoted pitch"
 extractFirstPitch mus = let
     firstInTime = head mus
     firstLy = firstInTime ^. val.pitch
-    f (Ly a) = if typeOf a == typeOf (Ly (LyPitch undefined))
+    f (Ly a) = if typeOf a == typeOf (LyPitch undefined)
                then let (LyPitch pp) = fromJust $ cast a in pp
                else error "note in quoted pitch is not a LyPitch"
     in f firstLy
