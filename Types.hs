@@ -203,6 +203,12 @@ instance Renderable LyNull where
     renderInStaff _ _ = ""
     getMarkup _ = []
 
+{- just a little extra standardization when
+getting the type of Ly we have.
+-}
+typeOfLy :: Ly -> TypeRep
+typeOfLy (Ly a) = typeOf a
+
 type MusicOf a = [(InTime (Note a))] -- Invariant: must be sorted chronologically
 type Music = MusicOf Ly
 
