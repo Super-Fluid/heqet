@@ -594,6 +594,29 @@ placeClefChanges = placeClefChanges'h Nothing where
                 Just old -> if old == new
                             then poly:(placeClefChanges'h c polys)
                             else (changeClef new):poly:(placeClefChanges'h (Just new) polys)
+
+placeMeterChanges :: Music -> Music
+placeMeterChanges m = let
+    measuresAndBeats :: Music
+    measuresAndBeats = m^.filteringBy (\it -> 
+        (it^.val.pitch & typeOfLy) == (typeOf LyMeasureEvent) ||  
+        (it^.val.pitch & typeOfLy) == (typeOf LyBeatEvent))
+        & sortBy (comparing (\it -> it^.t) <> 
+            comparing (\it -> (it^.val.pitch & typeOfLy) == (typeOf LyBeatEvent)))
+        -- sort by time, with a measure before its first beat
+    takeMeasures :: [Music] -> LyNote -> [Music]
+    takeMeasures acc it = 
+        if (typeOfLy $ it^.val.pitch) == typeOf LyMeasureEvent
+        then [it]:acc -- new measure
+        else case acc of -- add beats
+            [] -> [[it]]
+            (a:acc) -> (it:a):acc
+    segmentedMeasuresAndBeats :: [Music]
+    segmentedMeasuresAndBeats = reverse $ (map reverse) $ foldl takeMeasures [] m
+    -- reverse puts the music and measures back in chronological order
+    
+    in m
+
 {-
 Pack the multiple notes in a ChordR into
 a single note with multiple pitches.
@@ -625,6 +648,7 @@ preRender :: Music -> Music
 preRender mus = mus
     & fixLines
     & breakDurationsOverNonPlayables
+    & placeMeterChanges
 
 allRendering :: Music -> String
 allRendering mus = mus

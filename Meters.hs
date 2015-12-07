@@ -67,10 +67,10 @@ m98 = (concat [measure,beat,beat2dot,beat3dot], 9/2)
 m128 :: MMeter
 m128 = (concat [measure,beat,beat2dot,beat3dot,beat4dot], 6)
 
-assignMeter :: (Music,Duration) -> Music -> Music
+assignMeter :: MMeter -> Music -> Music
 assignMeter = assignMeterWithLine "all"
 
-assignMeterWithLine :: String -> (Music,Duration) -> Music -> Music
+assignMeterWithLine :: String -> MMeter -> Music -> Music
 assignMeterWithLine s (rawmeter,duration) music = music ++ (meterTrack $ getStartTime music) where
     meter = assignLine s rawmeter
     endTime = getEndTime music

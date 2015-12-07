@@ -211,6 +211,9 @@ typeOfLy (Ly a) = typeOf a
 
 type MusicOf a = [(InTime (Note a))] -- Invariant: must be sorted chronologically
 type Music = MusicOf Ly
+type LyNote = (InTime (Note Ly)) 
+-- just for clarity in type signatures
+-- Music = [LyNote]
 
 type Beat = Rational
 type Measure = [Beat]
