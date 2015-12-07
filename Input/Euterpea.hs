@@ -10,7 +10,7 @@ fromEu :: E.Music E.Pitch -> Music
 fromEu (E.Prim (E.Note dur (pc, oct))) = let 
        (hegetPC,hegetAcc) = convertPC pc
        n = emptyNote 
-       	   & pitch .~ Ly (LyPitch MakePitch { _pc = hegetPC, _oct = oct, _cents = 0 })
+       	   & pitch .~ Ly (LyPitch MakePitch { _pc = hegetPC, _oct = oct - 4, _cents = 0 })
 	   & acc .~ Just hegetAcc
        it = InTime { _val = n, _dur = dur, _t = 0 }
        in [it]

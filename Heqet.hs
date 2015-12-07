@@ -7,6 +7,7 @@ module Heqet
     , module Instruments
     , module Types
     , module Dynamics
+    , module Split
     ) where
 
 import Input.English
@@ -20,5 +21,6 @@ import Assigners
 import Output.FastRender
 import Meters
 import qualified Dynamics
+import Split
 
 import Control.Lens
