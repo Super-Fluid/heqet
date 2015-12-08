@@ -62,6 +62,7 @@ melody = Instrument {
     , _name = "Melody"
     , _shortName = "M"
     , _kind = "Abstract"
+    , _nSubStaves = 1
     }
 
 flute = Instrument { 
@@ -75,6 +76,7 @@ flute = Instrument {
     , _name = "Flute"
     , _shortName = "Fl"
     , _kind = "Flute"
+    , _nSubStaves = 1
     }
 
 oboe = Instrument { 
@@ -88,6 +90,7 @@ oboe = Instrument {
     , _name = "Oboe"
     , _shortName = "Ob"
     , _kind = "Oboe"
+    , _nSubStaves = 1
     }
 
 clarinet = Instrument { 
@@ -101,6 +104,7 @@ clarinet = Instrument {
     , _name = "Clarinet"
     , _shortName = "Cl"
     , _kind = "Clarinet"
+    , _nSubStaves = 1
     }
 
 bassoon = Instrument { 
@@ -114,6 +118,7 @@ bassoon = Instrument {
     , _name = "Bassoon"
     , _shortName = "Bsn"
     , _kind = "Bassoon"
+    , _nSubStaves = 1
     }
 
 soprano_sax = Instrument { 
@@ -127,6 +132,7 @@ soprano_sax = Instrument {
     , _name = "Soprano Sax"
     , _shortName = "S Sx"
     , _kind = "Soprano Sax"
+    , _nSubStaves = 1
     }
 
 alto_sax = Instrument { 
@@ -140,6 +146,7 @@ alto_sax = Instrument {
     , _name = "Alto Sax"
     , _shortName = "A Sx"
     , _kind = "Alto Sax"
+    , _nSubStaves = 1
     }
 
 tenor_sax = Instrument { 
@@ -153,6 +160,7 @@ tenor_sax = Instrument {
     , _name = "Tenor Sax"
     , _shortName = "T Sx"
     , _kind = "Tenor Sax"
+    , _nSubStaves = 1
     }
 
 baritone_sax = Instrument { 
@@ -166,6 +174,7 @@ baritone_sax = Instrument {
     , _name = "Baritone Sax"
     , _shortName = "B Sx"
     , _kind = "Baritone Sax"
+    , _nSubStaves = 1
     }
 
 violin = Instrument { 
@@ -179,6 +188,7 @@ violin = Instrument {
     , _name = "Violin"
     , _shortName = "Vln"
     , _kind = "Violin"
+    , _nSubStaves = 1
     }
 
 viola = Instrument { 
@@ -192,6 +202,7 @@ viola = Instrument {
     , _name = "Viola"
     , _shortName = "Vla"
     , _kind = "Viola"
+    , _nSubStaves = 1
     }
 
 cello = Instrument { 
@@ -205,6 +216,7 @@ cello = Instrument {
     , _name = "Cello"
     , _shortName = "Vc"
     , _kind = "Cello"
+    , _nSubStaves = 1
     }
 
 string_bass = Instrument { 
@@ -218,6 +230,7 @@ string_bass = Instrument {
     , _name = "Bass"
     , _shortName = "Bass"
     , _kind = "String Bass"
+    , _nSubStaves = 1
     }
 
 trumpet = Instrument { 
@@ -231,6 +244,7 @@ trumpet = Instrument {
     , _name = "Trumpet"
     , _shortName = "Tpt"
     , _kind = "Trumpet"
+    , _nSubStaves = 1
     }
 
 horn = Instrument { 
@@ -244,6 +258,7 @@ horn = Instrument {
     , _name = "Horn"
     , _shortName = "Hn"
     , _kind = "Horn"
+    , _nSubStaves = 1
     }
 
 trombone = Instrument { 
@@ -257,6 +272,7 @@ trombone = Instrument {
     , _name = "Trombone"
     , _shortName = "Tbn"
     , _kind = "Trombone"
+    , _nSubStaves = 1
     }
 
 tuba = Instrument { 
@@ -270,6 +286,7 @@ tuba = Instrument {
     , _name = "Tuba"
     , _shortName = "Tba"
     , _kind = "Tuba"
+    , _nSubStaves = 1
     }
 
 piano = Instrument { 
@@ -283,4 +300,5 @@ piano = Instrument {
     , _name = "Piano"
     , _shortName = "Pno"
     , _kind = "Piano"
+    , _nSubStaves = 2
     }

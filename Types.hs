@@ -61,6 +61,7 @@ data Instrument = Instrument {
     -- name can be whatever, like "Siouxza" (the YPMB way to write "Sousaphone"),
     -- but the kind should be standard, like "Tuba" in this case.
     , _kind :: String
+    , _nSubStaves :: Int
     }
 
 type Lyric = String
@@ -104,6 +105,7 @@ data Note a = Note {
     , _artics :: [SimpleArticulation] -- all other articulations are noteCommands
     , _tags :: [(String,String)]
     , _line :: Maybe String
+    , _subStaff :: Maybe String -- Like RH, LH, Pedal for piano, organ, etc
     , _clef :: Maybe Clef
     , _inst :: Maybe Instrument
     , _chord :: Maybe Chord
@@ -129,6 +131,7 @@ emptyNote = Note {
     , _inst = Nothing
     , _chord = Nothing
     , _key = Nothing
+    , _subStaff = Nothing
     }
 
 data Ly = forall a. (Renderable a, Playable a, Typeable a, Show a) => Ly a
