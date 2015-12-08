@@ -639,16 +639,19 @@ placeMeterChanges m = let
     durParts = getMeasureDurations segmentedMeasures
     signatures = zip beatPartsFrom0 durParts
     maybeMeters = map (\x -> lookup x meterTable) signatures
-    renderMeter :: (Maybe LyMeterEvent) -> PointInTime -> LyNote
-    renderMeter Nothing pit = InTime {
+    metersToKeep = nubBy (\(a,_) (b,_) ->
+        isJust a && isJust b && fromJust a == fromJust b
+        ) $ zip maybeMeters meterStartTimes
+    renderMeter :: ((Maybe LyMeterEvent),PointInTime) -> LyNote
+    renderMeter (Nothing,pit) = InTime {
         _val = emptyNote & pitch .~ (Ly LyEffect) & errors %~ ("unknown meter":)
         ,_dur = 1
         ,_t = pit }
-    renderMeter (Just meter) pit = InTime {
+    renderMeter ((Just meter),pit) = InTime {
         _val = emptyNote & pitch .~ (Ly meter)
         ,_dur = 1
         ,_t = pit }
-    meterChanges = zipWith renderMeter maybeMeters meterStartTimes
+    meterChanges = map renderMeter metersToKeep
     in case notMeasuresAndBeats of
         [] -> m
         xs -> m `parI` (meterChanges & traverse.val.line .~ ((head xs)^.val.line))

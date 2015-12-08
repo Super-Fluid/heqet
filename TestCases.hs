@@ -68,6 +68,6 @@ keys = let
 oneNote = [music| c4 |] & traverse.val.inst .~ Just Instruments.violin
 
 meters = let
-    a = [music| c4 d4 e4 |] & assignMeter m3_4
+    a = [music| c4 d4 e4 c' d' e' |] & assignMeter m3_4
     b = [music| f8 e d c b a g b |] & assignMeter m4_4
     in (a `seqI` b `seqI` a) & traverse.val.inst .~ Just Instruments.violin

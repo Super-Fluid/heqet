@@ -189,15 +189,15 @@ data LyPitch = LyPitch Pitch
 lyPitchType = typeOf (LyPitch undefined)
 
 data LyRest = LyRest
-    deriving (Show,Read,Typeable)
+    deriving (Show,Read,Typeable,Eq)
 lyRestType = typeOf (LyRest)
 
 data LyPerc = LyPerc Perc
-    deriving (Show,Read,Typeable)
+    deriving (Show,Read,Typeable,Eq)
 lyPercType = typeOf (LyPerc undefined)
 
 data LyEffect = LyEffect
-    deriving (Show,Read,Typeable)
+    deriving (Show,Read,Typeable,Eq)
 lyEffectType = typeOf (LyEffect)
 
 data LyLyric = LyLyric Lyric
@@ -205,27 +205,27 @@ data LyLyric = LyLyric Lyric
 lyLyricType = typeOf (LyLyric undefined)
 
 data LyGrace = LyGrace Music
-    deriving (Show,     Typeable)
+    deriving (Show,     Typeable   )
 lyGraceType = typeOf (LyGrace undefined)
 
 data LyMeasureEvent = LyMeasureEvent
-    deriving (Show,Read,Typeable)
+    deriving (Show,Read,Typeable,Eq)
 lyMeasureEventType = typeOf (LyMeasureEvent)
 
 data LyBeatEvent = LyBeatEvent
-    deriving (Show,Read,Typeable)
+    deriving (Show,Read,Typeable,Eq)
 lyBeatEventType = typeOf (LyBeatEvent)
 
 data LyKeyEvent = LyKeyEvent Key
-    deriving (Show,Read,Typeable)
+    deriving (Show,Read,Typeable,Eq)
 lyKeyEventType = typeOf (LyKeyEvent undefined)
 
 data LyClefEvent = LyClefEvent Clef
-    deriving (Show,Read,Typeable)
+    deriving (Show,Read,Typeable,Eq)
 lyClefEventType = typeOf (LyClefEvent undefined)
 
 data LyMeterEvent = LyMeterEvent Meter
-    deriving (Show,Read,Typeable)
+    deriving (Show,Read,Typeable,Eq)
 lyMeterEventType = typeOf (LyMeterEvent undefined)
 
 
