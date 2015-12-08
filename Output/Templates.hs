@@ -37,7 +37,6 @@ midiInstrument = "|] ++ (insts !! 0)^.midiInstrument ++ [r|"
 instrumentName = "|] ++ (concat $ intersperse " & " $ map (^.name) insts) ++ [r|"
 shortInstrumentName = "|] ++ (concat $ intersperse " & " $ map (^.shortName) insts) ++ [r|"
 } { 
-\once \override Staff.TimeSignature #'stencil = ##f 
 |] ++ contents ++ [r|
 \bar "|."}
 |]

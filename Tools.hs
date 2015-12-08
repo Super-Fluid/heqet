@@ -18,8 +18,11 @@ mapOverNotes :: (Note a -> Note a) -> MusicOf a -> MusicOf a
 mapOverNotes = map . fmap
 
 startMusicAt :: PointInTime -> MusicOf a -> MusicOf a
-startMusicAt pt mus = fst $ foldl f ([],pt) mus where
-    f (acc, pt) inT = ((inT & t .~ pt):acc, pt+(inT^.dur))
+startMusicAt _ [] = []
+startMusicAt pit mus = let
+    currentStartTime = minimum (mus ^..traverse.t)
+    shift = pit - currentStartTime
+    in mus & traverse.t %~ (+shift)
 
 startMusicAtZero :: MusicOf a -> MusicOf a
 startMusicAtZero = startMusicAt 0

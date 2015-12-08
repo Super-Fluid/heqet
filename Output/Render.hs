@@ -610,6 +610,9 @@ placeMeterChanges m = let
         & sortBy (comparing (\it -> it^.t) <> 
             comparing (\it -> (it^.val.pitch & typeOfLy) == (typeOf LyBeatEvent)))
         -- sort by time, with a measure before its first beat
+    notMeasuresAndBeats = m^.filteringBy (\it -> 
+        (it^.val.pitch & typeOfLy) /= (typeOf LyMeasureEvent) && 
+        (it^.val.pitch & typeOfLy) /= (typeOf LyBeatEvent))
     takeMeasures :: [Music] -> LyNote -> [Music]
     takeMeasures acc it = 
         if (typeOfLy $ it^.val.pitch) == typeOf LyMeasureEvent
@@ -645,7 +648,10 @@ placeMeterChanges m = let
         _val = emptyNote & pitch .~ (Ly meter)
         ,_dur = 1
         ,_t = pit }
-    in traceShowId $ m `parI` zipWith renderMeter maybeMeters meterStartTimes
+    meterChanges = zipWith renderMeter maybeMeters meterStartTimes
+    in case notMeasuresAndBeats of
+        [] -> m
+        xs -> m `parI` (meterChanges & traverse.val.line .~ ((head xs)^.val.line))
 
 {-
 Pack the multiple notes in a ChordR into

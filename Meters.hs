@@ -79,7 +79,7 @@ assignMeterWithLine s (rawmeter,duration) music = music ++ (meterTrack $ getStar
     meterTrack p = 
         if p >= endTime
         then []
-        else meter ++ meterTrack (p+duration)
+        else (startMusicAt p meter) ++ meterTrack (p+duration)
 
 -- to render changes in meter, we need to go from measure and beat
 -- events to Meters
