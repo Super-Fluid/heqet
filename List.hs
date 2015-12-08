@@ -25,3 +25,11 @@ filteringBy p = lens (filter p) (\s a -> s++a)
 
 atIndex :: Int -> Lens' [a] a
 atIndex i = lens (!! i) (\s a -> (take i s) ++ [a] ++ (drop (i+1) s))
+
+removeAdjacentDuplicatesBy :: (a -> a -> Bool) -> [a] -> [a]
+removeAdjacentDuplicatesBy _ [] = []
+removeAdjacentDuplicatesBy _ [x] = [x]
+removeAdjacentDuplicatesBy f (a:b:xs) = 
+    if a `f` b
+    then removeAdjacentDuplicatesBy f (a:xs)
+    else a:(removeAdjacentDuplicatesBy f (b:xs))

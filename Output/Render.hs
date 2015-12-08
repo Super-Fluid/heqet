@@ -20,8 +20,6 @@ import Data.Monoid
 import Data.Ord
 import Safe
 
-import Debug.Trace
-
 instance Renderable LyPitch where
     renderInStaff n (LyPitch p) = renderPitchAcc (p^.pc) (n^.acc) ++ renderOct (p^.oct)
     getMarkup _ = []
@@ -639,7 +637,7 @@ placeMeterChanges m = let
     durParts = getMeasureDurations segmentedMeasures
     signatures = zip beatPartsFrom0 durParts
     maybeMeters = map (\x -> lookup x meterTable) signatures
-    metersToKeep = nubBy (\(a,_) (b,_) ->
+    metersToKeep = removeAdjacentDuplicatesBy (\(a,_) (b,_) ->
         isJust a && isJust b && fromJust a == fromJust b
         ) $ zip maybeMeters meterStartTimes
     renderMeter :: ((Maybe LyMeterEvent),PointInTime) -> LyNote
