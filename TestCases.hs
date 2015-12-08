@@ -7,6 +7,7 @@ import Tools
 import qualified Instruments
 import Types
 import Meters
+import Split
 
 import Control.Lens
 
@@ -76,3 +77,8 @@ meters8 = let
     a = [music| c8 d e f g a |] & assignMeter m6_8
     b = [music| f8 e d c b a g b c |] & assignMeter m9_8
     in (a `seqI` b `seqI` a) & traverse.val.inst .~ Just Instruments.violin
+
+basicPiano = [music| << { c1 } // {c''4 d''4 e'' f''} >> c8 e g c' e' g' c'' e'' c'''1 |]
+    & traverse.val.inst .~ Just Instruments.piano
+    & assignMeter m4_4
+    & superBasicSplit

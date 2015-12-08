@@ -103,7 +103,7 @@ renderPitchAcc pc Nothing = fromJustNote "renderPitchAcc (no acc)" $ lookup pc (
 -- if there's no line information, put everything on line "1"
 fixLines :: Music -> Music
 fixLines m = let
-    lines = allVoices m
+    lines = allLines m
     in case lines of
         [] -> assignLine "1" m
         ["all"] -> assignLine "1" m
@@ -385,10 +385,24 @@ xNote n = let
     in "\\xNote "++fakePitch
 
 toStage0 :: Music -> [Music]
-toStage0 mus = (allVoices mus) & map (\v -> (mus^.ofLine v) ++ (mus^.ofLine "all"))
+toStage0 mus = (allStaves mus) & map (\v -> (mus^.filteringBy (isOfThisLineAndSubStaff v)))
 
-allVoices :: Music -> [String]
-allVoices = catMaybes.nub.sort.(map (^.val.line))
+allLines :: Music -> [String]
+allLines = catMaybes.nub.sort.(map (^.val.line))
+
+-- all staves will split the music into multiple staves for instruments like piano
+allStaves :: Music -> [(String,Maybe SubStaff)]
+allStaves m = let
+    rough :: [(Maybe String, Maybe SubStaff)]
+    rough = map (\x -> (x^.val.line,x^.val.subStaff)) m
+    cleaned = filter (\(s, _) -> isJust s) rough
+    in cleaned & traverse._1 %~ fromJust
+
+isOfThisLineAndSubStaff :: (String,Maybe SubStaff) -> LyNote -> Bool
+isOfThisLineAndSubStaff (s,ss) n = 
+    (n^.val.line == Just s || n^.val.line == Just "all")
+    && 
+    (n^.val.subStaff == ss)
 
 isChordable :: InTime (Note Ly) -> InTime (Note Ly) -> Bool
 isChordable it1 it2 = (it1^.dur == it2^.dur) && (it1^.t == it2^.t) &&
@@ -531,10 +545,18 @@ heightAndLengthPossibilityOfLy (Ly ly) = case info ly of
         Just x -> (x,True)
 
 scoreToLy :: Stage1 -> String
-scoreToLy score = basicScore (concat $ map (staffFromProgress.
-                                            placeClefChanges.
-                                            applySlursToStaff.
-                                            staffToProgress) score)
+scoreToLy score = basicScore (concat $ score 
+    & map (placeClefChanges.
+        applySlursToStaff.
+        staffToProgress)
+    & groupMultiStaffInstruments
+    & map staffFromProgress
+    )
+
+groupMultiStaffInstruments :: ScoreInProgress -> ScoreInProgressMultiStaffInstruments
+groupMultiStaffInstruments staves = let
+    
+    in map (:[]) staves
 
 staffInstruments :: StaffInProgress -> [Instrument]
 staffInstruments = let
@@ -550,8 +572,13 @@ staffInstruments = let
 staffToProgress :: Staff -> StaffInProgress
 staffToProgress = map polyToProgress
 
-staffFromProgress :: StaffInProgress -> String
-staffFromProgress staff = basicStaff (staffInstruments staff) (concat $ intersperse " " $ map polyFromProgress staff)
+staffFromProgress :: [StaffInProgress] -> String
+staffFromProgress [] = error "instrument with zero staves, should never happen"
+staffFromProgress [staff] = basicStaff (staffInstruments staff) (plainStaffFromProgress staff)
+staffFromProgress staves = pianoStaff (staffInstruments (concat staves)) (map plainStaffFromProgress staves)
+
+plainStaffFromProgress :: StaffInProgress -> String
+plainStaffFromProgress staff = concat $ intersperse " " $ map polyFromProgress staff
 
 polyToProgress :: Polyphony -> PolyInProgress
 polyToProgress (Voices lins) = VoicesInProgress $ map linToProgress lins

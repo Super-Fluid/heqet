@@ -78,6 +78,8 @@ data ChordFlavor = MajorC | MinorC | Diminished | Augmented | MajorMinor
 type Key = (PitchClass, Mode, Maybe Accidental)
 data Mode = MajorM | MinorM -- | MajorBlues | MinorBlues | Dorian | Lydian | etc
     deriving (Eq, Show, Read)
+data SubStaff = RH | ExtraRH | LH | ExtraLH | Pedal
+    deriving (Eq, Show, Read)
 
 data Meter = Meter Int Int
     deriving (Show,Read,Eq)
@@ -105,7 +107,7 @@ data Note a = Note {
     , _artics :: [SimpleArticulation] -- all other articulations are noteCommands
     , _tags :: [(String,String)]
     , _line :: Maybe String
-    , _subStaff :: Maybe String -- Like RH, LH, Pedal for piano, organ, etc
+    , _subStaff :: Maybe SubStaff -- Like RH, LH, Pedal for piano, organ, etc
     , _clef :: Maybe Clef
     , _inst :: Maybe Instrument
     , _chord :: Maybe Chord
@@ -294,6 +296,7 @@ type LinearInProgress = [NoteInProgress]
 data PolyInProgress = StaffEventInProgress NoteInProgress | VoicesInProgress [LinearInProgress]
 type StaffInProgress = [PolyInProgress]
 type ScoreInProgress = [StaffInProgress]
+type ScoreInProgressMultiStaffInstruments = [[StaffInProgress]]
 
 makeLenses ''WrittenNote
 makeLenses ''InTime
