@@ -31,14 +31,35 @@ basicScore contents = [r|
 \midi { }
 }|]
 
+renderInstrumentNames :: [Instrument] -> String
+renderInstrumentNames insts = concat $ intersperse " & " $ map (^.name) insts
+
+renderInstrumentShortNames :: [Instrument] -> String
+renderInstrumentShortNames insts = concat $ intersperse " & " $ map (^.shortName) insts
+
 basicStaff :: [Instrument] -> String -> String
 basicStaff insts contents = [r|\new Staff \with {
 midiInstrument = "|] ++ (insts !! 0)^.midiInstrument ++ [r|"
-instrumentName = "|] ++ (concat $ intersperse " & " $ map (^.name) insts) ++ [r|"
-shortInstrumentName = "|] ++ (concat $ intersperse " & " $ map (^.shortName) insts) ++ [r|"
+instrumentName = "|] ++ renderInstrumentNames insts ++ [r|"
+shortInstrumentName = "|] ++ renderInstrumentShortNames insts ++ [r|"
 } { 
 |] ++ contents ++ [r|
 \bar "|."}
+|]
+
+unNamedStaff :: String -> String
+unNamedStaff contents = [r|\new Staff { 
+|] ++ contents ++ [r|
+\bar "|."}
+|]
+
+pianoStaff :: [Instrument] -> [String] -> String
+pianoStaff insts substaves = [r|\new PianoStaff <<
+\set PianoStaff.midiInstrument = "|] ++ (insts !! 0)^.midiInstrument ++ [r|"
+\set PianoStaff.instrumentName = #"|] ++ renderInstrumentNames insts ++ [r|"
+\set PianoStaff.shortInstrumentName = #"|] ++ renderInstrumentShortNames insts ++ [r|"
+|] ++ (concat $ intersperse "\n" $ map unNamedStaff substaves) ++ [r|
+>>
 |]
 
 -- operating on notes:
