@@ -390,7 +390,7 @@ toStage0 :: Music -> [Music]
 toStage0 mus = (allVoices mus) & map (\v -> (mus^.ofLine v) ++ (mus^.ofLine "all"))
 
 allVoices :: Music -> [String]
-allVoices = catMaybes.(map head).group.sort.(map (^.val.line))
+allVoices = catMaybes.nub.sort.(map (^.val.line))
 
 isChordable :: InTime (Note Ly) -> InTime (Note Ly) -> Bool
 isChordable it1 it2 = (it1^.dur == it2^.dur) && (it1^.t == it2^.t) &&
@@ -574,9 +574,12 @@ polyFromProgress (StaffEventInProgress e) = extractStaffEvent e
 extractStaffEvent :: NoteInProgress -> String
 extractStaffEvent (n, _) = let 
     multi = n^.pitch 
-    in case multi of
-    [] -> "" -- should not happen
-    ((Ly a,_,_):_) -> renderInStaff n a
+    in 
+        if (typeOfLy ((^._1) $ head $ n^.pitch) == lyEffectType)
+        then " " ++ errorRedNotehead ++ " " ++ (xNote n)
+        else case multi of
+                [] -> "" -- should not happen
+                ((Ly a,_,_):_) -> renderInStaff n a
         -- we only care about the first one because there should only be one
 
 placeClefChanges :: StaffInProgress -> StaffInProgress
@@ -640,9 +643,9 @@ placeMeterChanges m = let
         ,_t = pit }
     renderMeter (Just meter) pit = InTime {
         _val = emptyNote & pitch .~ (Ly meter)
-        ,_dur = 0
+        ,_dur = 1
         ,_t = pit }
-    in m `parI` zipWith renderMeter maybeMeters meterStartTimes
+    in traceShowId $ m `parI` zipWith renderMeter maybeMeters meterStartTimes
 
 {-
 Pack the multiple notes in a ChordR into
