@@ -8,6 +8,7 @@ import Tools
 import List
 import qualified Output.LilypondSettings
 import LyInstances
+import Meters
 
 import Control.Lens
 import Data.Maybe
@@ -18,6 +19,8 @@ import Control.Applicative
 import Data.Monoid
 import Data.Ord
 import Safe
+
+import Debug.Trace
 
 instance Renderable LyPitch where
     renderInStaff n (LyPitch p) = renderPitchAcc (p^.pc) (n^.acc) ++ renderOct (p^.oct)
@@ -612,10 +615,34 @@ placeMeterChanges m = let
             [] -> [[it]]
             (a:acc) -> (it:a):acc
     segmentedMeasuresAndBeats :: [Music]
-    segmentedMeasuresAndBeats = reverse $ (map reverse) $ foldl takeMeasures [] m
+    segmentedMeasuresAndBeats = reverse $ (map reverse) $ foldl takeMeasures [] measuresAndBeats
+    segmentedBeats = segmentedMeasuresAndBeats & map (^.ofType lyBeatEventType)
     -- reverse puts the music and measures back in chronological order
-    
-    in m
+    beatParts = map (^..traverse.t) segmentedBeats
+    beatPartsFrom0 = zipWith (\bs pit -> map (subtract pit) bs) beatParts meterStartTimes
+    -- measure each set of beats from where the measure began
+    -- the first beat of each list should be 0
+    segmentedMeasures = segmentedMeasuresAndBeats 
+        & map (^.ofType lyMeasureEventType) 
+        & map head -- we shouldn't have any measures without measure events
+    meterStartTimes = segmentedMeasures^..traverse.t
+    getMeasureDurations :: [LyNote] -> [Duration]
+    getMeasureDurations [] = []
+    getMeasureDurations [it] = [(getEndTime m) - (it^.t)]
+    getMeasureDurations (this:next:more) = (next^.t - this^.t):(getMeasureDurations (next:more))
+    durParts = getMeasureDurations segmentedMeasures
+    signatures = zip beatPartsFrom0 durParts
+    maybeMeters = map (\x -> lookup x meterTable) signatures
+    renderMeter :: (Maybe LyMeterEvent) -> PointInTime -> LyNote
+    renderMeter Nothing pit = InTime {
+        _val = emptyNote & pitch .~ (Ly LyEffect) & errors %~ ("unknown meter":)
+        ,_dur = 1
+        ,_t = pit }
+    renderMeter (Just meter) pit = InTime {
+        _val = emptyNote & pitch .~ (Ly meter)
+        ,_dur = 0
+        ,_t = pit }
+    in m `parI` zipWith renderMeter maybeMeters meterStartTimes
 
 {-
 Pack the multiple notes in a ChordR into

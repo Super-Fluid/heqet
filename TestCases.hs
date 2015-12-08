@@ -62,5 +62,12 @@ keys = let
     a = [music| a4 b cs d|] & mapOverNotes (\x -> x & key .~ Just (A,MajorM,Just Natural))
     b = [music| ef4 f8 ef bf4 a|] & mapOverNotes (\x -> x & key .~ Just (Ds,MajorM,Just Flat))
     in (a ++ (startMusicAt 4 b)) & mapOverNotes (\x -> x
-        & inst .~ Just Instruments.violin
+        & inst .~ Just Instruments.violin 
     )
+
+oneNote = [music| c4 |] & traverse.val.inst .~ Just Instruments.violin
+
+meters = let
+    a = [music| c4 d4 e4 |] & assignMeter m3_4
+    b = [music| f8 e d c b a g b |] & assignMeter m4_4
+    in (a `seqI` b `seqI` a) & traverse.val.inst .~ Just Instruments.violin

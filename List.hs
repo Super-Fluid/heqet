@@ -17,6 +17,9 @@ makeBucketsBy comp xs = foldr f [] xs where
                else y:(f x ys)
 
 -- note: does NOT preserve order!
+-- or rather, preserves the order of the items
+-- we're filtering for, but not the order
+-- of the whole list
 filteringBy :: (a -> Bool) -> Lens' [a] [a]
 filteringBy p = lens (filter p) (\s a -> s++a)
 

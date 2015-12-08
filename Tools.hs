@@ -12,6 +12,7 @@ import Data.Maybe
 import Data.Monoid
 import Data.Ord
 import Safe
+import Data.Typeable
 
 mapOverNotes :: (Note a -> Note a) -> MusicOf a -> MusicOf a
 mapOverNotes = map . fmap
@@ -37,6 +38,9 @@ instName v = filteringBy (\it -> ((^.name) <$> it^.val.inst) == Just v)
 
 instKind :: String -> Lens' Music Music
 instKind v = filteringBy (\it -> ((^.kind) <$> it^.val.inst) == Just v)
+
+ofType :: TypeRep -> Lens' Music Music
+ofType t = filteringBy (\it -> (it^.val.pitch & typeOfLy) == t)
 
 timeSort :: [InTime a] -> [InTime a]
 timeSort = sortBy $ \it1 it2 -> (it1^.t) `compare` (it2^.t)
