@@ -10,6 +10,7 @@ module Types where
 import Control.Lens
 import Data.Typeable
 import Data.Maybe
+import Data.Typeable
 
 data PitchClass = C | Cs | D | Ds | E | F | Fs | G | Gs | A | As | B
     deriving (Show, Eq, Ord, Enum, Bounded, Read)
@@ -167,6 +168,15 @@ Playable instance for it.
 instance Playable a where
     info = const Nothing
 
+-- this instance is not made to be used.
+-- it's just so things don't complain about
+-- missing Renderable instances if you don't
+-- import Render, which you can't always do
+-- because it can cause a cycle of imports.
+instance Renderable a where
+    renderInStaff _ _ = ""
+    getMarkup _ = []
+
 data PlayInfo = PlayInfo {
     _slurrable :: Bool
   , _chordable :: Bool
@@ -176,26 +186,50 @@ data PlayInfo = PlayInfo {
 
 data LyPitch = LyPitch Pitch
     deriving (Show,Read,Typeable)
+lyPitchType = typeOf (LyPitch undefined)
+
 data LyRest = LyRest
     deriving (Show,Read,Typeable)
+lyRestType = typeOf (LyRest)
+
 data LyPerc = LyPerc Perc
     deriving (Show,Read,Typeable)
+lyPercType = typeOf (LyPerc undefined)
+
 data LyEffect = LyEffect
     deriving (Show,Read,Typeable)
+lyEffectType = typeOf (LyEffect)
+
 data LyLyric = LyLyric Lyric
     deriving (Show,Read,Typeable)
+lyLyricType = typeOf (LyLyric undefined)
+
 data LyGrace = LyGrace Music
     deriving (Show,     Typeable)
+lyGraceType = typeOf (LyGrace undefined)
+
 data LyMeasureEvent = LyMeasureEvent
     deriving (Show,Read,Typeable)
+lyMeasureEventType = typeOf (LyMeasureEvent)
+
 data LyBeatEvent = LyBeatEvent
     deriving (Show,Read,Typeable)
+lyBeatEventType = typeOf (LyBeatEvent)
+
 data LyKeyEvent = LyKeyEvent Key
     deriving (Show,Read,Typeable)
+lyKeyEventType = typeOf (LyKeyEvent undefined)
+
 data LyClefEvent = LyClefEvent Clef
     deriving (Show,Read,Typeable)
+lyClefEventType = typeOf (LyClefEvent undefined)
+
 data LyMeterEvent = LyMeterEvent Meter
     deriving (Show,Read,Typeable)
+lyMeterEventType = typeOf (LyMeterEvent undefined)
+
+
+-- I actually can't think of any reason for this to exist?
 data LyNull = LyNull
     deriving (Show,Read,Typeable)
 
