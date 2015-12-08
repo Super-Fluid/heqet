@@ -71,3 +71,8 @@ meters = let
     a = [music| c4 d4 e4 c' d' e' |] & assignMeter m3_4
     b = [music| f8 e d c b a g b |] & assignMeter m4_4
     in (a `seqI` b `seqI` a) & traverse.val.inst .~ Just Instruments.violin
+
+meters8 = let
+    a = [music| c8 d e f g a |] & assignMeter m6_8
+    b = [music| f8 e d c b a g b c |] & assignMeter m9_8
+    in (a `seqI` b `seqI` a) & traverse.val.inst .~ Just Instruments.violin
