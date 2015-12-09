@@ -396,7 +396,7 @@ allStaves m = let
     rough :: [(Maybe String, Maybe SubStaff)]
     rough = map (\x -> (x^.val.line,x^.val.subStaff)) m
     cleaned = filter (\(s, _) -> isJust s) rough
-    in cleaned & traverse._1 %~ fromJust
+    in cleaned & traverse._1 %~ fromJust & nub
 
 isOfThisLineAndSubStaff :: (String,Maybe SubStaff) -> LyNote -> Bool
 isOfThisLineAndSubStaff (s,ss) n = 

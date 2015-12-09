@@ -79,6 +79,6 @@ meters8 = let
     in (a `seqI` b `seqI` a) & traverse.val.inst .~ Just Instruments.violin
 
 basicPiano = [music| << { c1 } \\ {c''4 d''4 e'' f''} >> c8 e g c' e' g' c'' e'' c'''1 |]
-    & assignMeter m4_4
+--    & assignMeter m4_4
     & superBasicSplit
     & traverse.val.inst .~ Just Instruments.piano
