@@ -18,7 +18,6 @@ import Data.Typeable
 
 import Types hiding (chord)
 import Tables
-import Output.Render -- Just for the Renderable instances. 
 import LyInstances
 
 type PitchStr = String

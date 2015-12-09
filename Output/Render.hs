@@ -9,6 +9,7 @@ import List
 import qualified Output.LilypondSettings
 import LyInstances
 import Meters
+import qualified Instruments
 
 import Control.Lens
 import Data.Maybe
@@ -716,6 +717,7 @@ preRender mus = mus
     & breakDurationsOverNonPlayables
     & placeMeterChanges
     & addPartialIfNeeded
+    & Instruments.assignAllConcertClefs
 
 allRendering :: Music -> String
 allRendering mus = mus

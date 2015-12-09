@@ -78,7 +78,7 @@ meters8 = let
     b = [music| f8 e d c b a g b c |] & assignMeter m9_8
     in (a `seqI` b `seqI` a)
 
-partial = [music| b,8 c8 d e f g a b c'|] & startMusicAt (-1/8) & assignMeter0 m4_4
+partial = [music| b,8 c8 d e f g a b c'|] & startMusicAt (-1/8) & assignMeter0 m4_4 & traverse.val.inst .~ Just Instruments.horn
 
 basicPiano = [music| << { c1 } \\ {c''4 d''4 e'' f''} >> c8 e g c' e' g' c'' e'' c'''1 |]
 --    & assignMeter m4_4

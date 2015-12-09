@@ -56,11 +56,25 @@ melody = Instrument {
     , _pickUpTime = 0
     , _putDownTime = 0
     , _annotatePlayability = id
-    , _assignConcertClefs = allTreble
-    , _assignWrittenClefs = allTreble
+    , _assignConcertClefs = bassOrTreble
+    , _assignWrittenClefs = bassOrTreble
     , _transposition = [pp| c |]
     , _name = "Melody"
     , _shortName = "M"
+    , _kind = "Abstract"
+    , _nSubStaves = 1
+    }
+
+blank = Instrument { 
+      _midiInstrument = "acoustic grand"
+    , _pickUpTime = 0
+    , _putDownTime = 0
+    , _annotatePlayability = id
+    , _assignConcertClefs = bassOrTreble
+    , _assignWrittenClefs = bassOrTreble
+    , _transposition = [pp| c |]
+    , _name = ""
+    , _shortName = ""
     , _kind = "Abstract"
     , _nSubStaves = 1
     }
