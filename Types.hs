@@ -12,6 +12,8 @@ import Data.Typeable
 import Data.Maybe
 import Data.Typeable
 import Data.Ratio
+import Data.Tuple
+import Safe
 
 data PitchClass = C | Cs | D | Ds | E | F | Fs | G | Gs | A | As | B
     deriving (Show, Eq, Ord, Enum, Bounded, Read)
@@ -194,7 +196,7 @@ data LyPitch = LyPitch Pitch
     deriving (Show,Read,Typeable)
 lyPitchType = typeOf (LyPitch undefined)
 
--- see Render for Renderable instance
+-- see below, after lenses are created
 
 data LyRest = LyRest
     deriving (Show,Read,Typeable,Eq)
@@ -361,3 +363,142 @@ makeLenses ''Pitch
 makeLenses ''Note
 makeLenses ''Instrument
 makeLenses ''PlayInfo
+
+instance Renderable LyPitch where
+    renderInStaff n (LyPitch p) = renderPitchAcc (p^.pc) (n^.acc) ++ renderOct (p^.oct)
+    getMarkup _ = []
+
+renderPitchAcc :: PitchClass -> (Maybe Accidental) -> String
+renderPitchAcc pc (Just acc) = fromJustNote "renderPitchAcc (with acc)" $ lookup (pc,acc) (map swap en)
+renderPitchAcc pc Nothing = fromJustNote "renderPitchAcc (no acc)" $ lookup pc (map (\((p,a),s) -> (p,s)) (map swap en))
+
+renderOct :: Octave -> String
+renderOct oct
+    | oct == 0 = ""
+    | oct < 0 = replicate (- oct) ','
+    | otherwise = replicate (oct) '\''
+
+--- from Tables .... :( :( :(
+
+type LanguageData = [(String,(PitchClass,Accidental))]
+
+languages :: [(String,LanguageData)]
+languages = [
+    ("en",en)
+   ,("nl",nl)
+    ]
+
+en :: LanguageData
+en = [
+    ("a",(A,Natural))
+   ,("b",(B,Natural))
+   ,("c",(C,Natural))
+   ,("d",(D,Natural))
+   ,("e",(E,Natural))
+   ,("f",(F,Natural))
+   ,("g",(G,Natural))
+   ,("af",(Gs,Flat))
+   ,("bf",(As,Flat))
+   ,("cf",(B,Flat)) -- C flat not B flat!
+   ,("df",(Cs,Flat))
+   ,("ef",(Ds,Flat))
+   ,("ff",(E,Flat))
+   ,("gf",(Fs,Flat))
+   ,("aff",(G,DoubleFlat))
+   ,("bff",(A,DoubleFlat))
+   ,("cff",(As,DoubleFlat))
+   ,("dff",(C,DoubleFlat))
+   ,("eff",(D,DoubleFlat))
+   ,("fff",(Ds,DoubleFlat))
+   ,("gff",(F,DoubleFlat))
+   ,("as",(As,Sharp))
+   ,("bs",(C,Sharp))
+   ,("cs",(Cs,Sharp))
+   ,("ds",(Ds,Sharp))
+   ,("es",(F,Sharp))
+   ,("fs",(Fs,Sharp))
+   ,("gs",(Gs,Sharp))
+   ,("ass",(B,DoubleSharp))
+   ,("bss",(Cs,DoubleSharp))
+   ,("css",(D,DoubleSharp))
+   ,("dss",(E,DoubleSharp))
+   ,("ess",(Fs,DoubleSharp))
+   ,("fss",(G,DoubleSharp))
+   ,("gss",(A,DoubleSharp))
+   ,("ax",(B,DoubleSharp))
+   ,("bx",(Cs,DoubleSharp))
+   ,("cx",(D,DoubleSharp))
+   ,("dx",(E,DoubleSharp))
+   ,("ex",(Fs,DoubleSharp))
+   ,("fx",(G,DoubleSharp))
+   ,("gx",(A,DoubleSharp))
+   ,("aflat",(Gs,Flat))
+   ,("bflat",(As,Flat))
+   ,("cflat",(B,Flat))
+   ,("dflat",(Cs,Flat))
+   ,("eflat",(Ds,Flat))
+   ,("fflat",(E,Flat))
+   ,("gflat",(Fs,Flat))
+   ,("aflatflat",(G,DoubleFlat))
+   ,("bflatflat",(A,DoubleFlat))
+   ,("cflatflat",(As,DoubleFlat))
+   ,("dflatflat",(C,DoubleFlat))
+   ,("eflatflat",(D,DoubleFlat))
+   ,("fflatflat",(Ds,DoubleFlat))
+   ,("gflatflat",(F,DoubleFlat))
+   ,("asharp",(As,Sharp))
+   ,("bsharp",(C,Sharp))
+   ,("csharp",(Cs,Sharp))
+   ,("dsharp",(Ds,Sharp))
+   ,("esharp",(F,Sharp))
+   ,("fsharp",(Fs,Sharp))
+   ,("gsharp",(Gs,Sharp))
+   ,("asharpsharp",(B,DoubleSharp))
+   ,("bsharpsharp",(Cs,DoubleSharp))
+   ,("csharpsharp",(D,DoubleSharp))
+   ,("dsharpsharp",(E,DoubleSharp))
+   ,("esharpsharp",(Fs,DoubleSharp))
+   ,("fsharpsharp",(G,DoubleSharp))
+   ,("gsharpsharp",(A,DoubleSharp))
+   ]
+
+nl :: LanguageData
+nl = [
+    ("a",(A,Natural))
+   ,("b",(B,Natural))
+   ,("c",(C,Natural))
+   ,("d",(D,Natural))
+   ,("e",(E,Natural))
+   ,("f",(F,Natural))
+   ,("g",(G,Natural))
+   ,("aes",(Gs,Flat))
+   ,("as",(Gs,Flat)) -- special
+   ,("bes",(As,Flat))
+   ,("ces",(B,Flat))
+   ,("des",(Cs,Flat))
+   ,("ees",(Ds,Flat))
+   ,("es",(Ds,Flat)) -- special
+   ,("fes",(E,Flat))
+   ,("ges",(Fs,Flat))
+   ,("aeses",(G,DoubleFlat))
+   ,("beses",(A,DoubleFlat))
+   ,("ceses",(As,DoubleFlat))
+   ,("deses",(C,DoubleFlat))
+   ,("eeses",(D,DoubleFlat))
+   ,("feses",(Ds,DoubleFlat))
+   ,("geses",(F,DoubleFlat))
+   ,("ais",(As,Sharp))
+   ,("bis",(C,Sharp))
+   ,("cis",(Cs,Sharp))
+   ,("dis",(Ds,Sharp))
+   ,("eis",(F,Sharp))
+   ,("fis",(Fs,Sharp))
+   ,("gis",(Gs,Sharp))
+   ,("aisis",(B,DoubleSharp))
+   ,("bisis",(Cs,DoubleSharp))
+   ,("cisis",(D,DoubleSharp))
+   ,("disis",(E,DoubleSharp))
+   ,("eisis",(Fs,DoubleSharp))
+   ,("fisis",(G,DoubleSharp))
+   ,("gisis",(A,DoubleSharp))
+   ]

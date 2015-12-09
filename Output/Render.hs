@@ -21,12 +21,6 @@ import Data.Monoid
 import Data.Ord
 import Safe
 
-import Debug.Trace
-
-instance Renderable LyPitch where
-    renderInStaff n (LyPitch p) = renderPitchAcc (p^.pc) (n^.acc) ++ renderOct (p^.oct)
-    getMarkup _ = []
-
 instance Renderable LyPerc where
     renderInStaff n _ = xNote n
     getMarkup (LyPerc s) = [markupText s]
@@ -66,9 +60,6 @@ breakDurationsAtPoint point mus = concatMap breakNote mus where
            then [it & dur .~ firstDur,  it & t .~ point & dur .~ secondDur]
            else [it]
 
-renderPitchAcc :: PitchClass -> (Maybe Accidental) -> String
-renderPitchAcc pc (Just acc) = fromJustNote "renderPitchAcc (with acc)" $ lookup (pc,acc) (map swap Tables.en)
-renderPitchAcc pc Nothing = fromJustNote "renderPitchAcc (no acc)" $ lookup pc (map (\((p,a),s) -> (p,s)) (map swap Tables.en))
 
 -- if there's no line information, put everything on line "1"
 fixLines :: Music -> Music
@@ -130,12 +121,6 @@ renderDuration dur
     | isJust (lookup dur commonDurations) = fromJustNote "renderDuration" (lookup dur commonDurations)
     | dur == 0 = ""
     | otherwise = "1"
-
-renderOct :: Octave -> String
-renderOct oct
-    | oct == 0 = ""
-    | oct < 0 = replicate (- oct) ','
-    | otherwise = replicate (oct) '\''
 
 startRenderingNote :: InTime (Note MultiPitchLy) -> NoteInProgress
 startRenderingNote it = (it^.val, WrittenNote [] [] "" (it^.dur) [] [] False)
@@ -714,10 +699,10 @@ linFromProgress lin = lin
 preRender :: Music -> Music
 preRender mus = mus
     & fixLines
+    & Instruments.assignAllConcertClefs
     & breakDurationsOverNonPlayables
     & placeMeterChanges
     & addPartialIfNeeded
-    & Instruments.assignAllConcertClefs
 
 allRendering :: Music -> String
 allRendering mus = mus
