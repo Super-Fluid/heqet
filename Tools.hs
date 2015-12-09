@@ -15,8 +15,6 @@ import Safe
 import Data.Typeable
 import LyInstances
 
-import Debug.Trace
-
 mapOverNotes :: (Note a -> Note a) -> MusicOf a -> MusicOf a
 mapOverNotes = map . fmap
 
@@ -55,7 +53,7 @@ getEndTime :: Music -> Duration
 getEndTime its = maximum $ map (\it -> (it^.t) + (it^.dur)) (filter (\it -> it^.val.pitch & isPlayable) its)
 
 getStartTime :: Music -> Duration
-getStartTime its = traceShow its $ minimum $ map (\it -> (it^.t)) (filter (\it -> it^.val.pitch & isPlayable) its)
+getStartTime its = minimum $ map (\it -> (it^.t)) (filter (\it -> it^.val.pitch & isPlayable) its)
 
 {-
 takeMusic :: PointInTime -> Lens' Music Music
