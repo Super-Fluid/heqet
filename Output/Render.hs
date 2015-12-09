@@ -45,7 +45,7 @@ instance Renderable LyGrace where
     getMarkup _ = []
 
 instance Renderable LyMeasureEvent where
-    renderInStaff _ _ = " | "
+    renderInStaff _ _ = " |\n "
     getMarkup _ = []
 
 instance Renderable LyKeyEvent where
