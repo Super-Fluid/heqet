@@ -423,12 +423,12 @@ isLyChordable (Ly a) = case info a of
 
 formChord :: [InTime (Note Ly)] -> InTime LinearNote
 formChord [it] = it & val .~ [(it^.val)]
-formChord its = (head its) & val .~ (its & map (^.val))
+formChord its = (headNote "formChord" its) & val .~ (its & map (^.val))
 
 combineChords :: Music -> Linear
 combineChords mus = mus 
     & makeBucketsBy isChordable
-    & sortBy (\a b -> ((head a)^.t) `compare` ((head b)^.t))
+    & sortBy (\a b -> ((headNote "combineChords" a)^.t) `compare` ((headNote "combineChords" b)^.t))
     & map formChord
 
 pitchLN :: LinearNote -> Double
@@ -437,7 +437,7 @@ pitchLN (ns) = (sum $ map pitch2num ns) / (fromIntegral $ length ns)
 
 timePitchSort :: Linear -> Linear
 timePitchSort = sortBy $ \it1 it2 -> (it1^.t) `compare` (it2^.t) <>
-                             (it1^.val & head & (^.pitch) & isPlayable) `compare` (it2^.val & head & (^.pitch) & isPlayable) <> -- non playable items come first
+                             (it1^.val & headNote "timePitchSort" & (^.pitch) & isPlayable) `compare` (it2^.val & headNote "timePitchSort" & (^.pitch) & isPlayable) <> -- non playable items come first
                              (pitchLN $ it1^.val) `compare` (pitchLN $ it2^.val)
 
 findPolys :: Linear -> Staff
@@ -576,11 +576,11 @@ staffInstruments = let
 
 staffToProgress :: Staff -> StaffInProgress
 staffToProgress [] = ((Nothing,Nothing), []) -- should never happen I think
-staffToProgress s = (((head s) & takeOneNote & view line ,
-                      (head s) & takeOneNote & view subStaff), map polyToProgress s) where
+staffToProgress s = (((headNote "staffToProgress" s) & takeOneNote & view line ,
+                      (headNote "staffToProgress" s) & takeOneNote & view subStaff), map polyToProgress s) where
     takeOneNote :: Polyphony -> Note Ly
-    takeOneNote (StaffEvent it) = head (it^.val)
-    takeOneNote (Voices its) = head ((head $ head its)^.val)
+    takeOneNote (StaffEvent it) = headNote "staffToProgress" (it^.val)
+    takeOneNote (Voices its) = headNote "staffToProgress" ((head $ head its)^.val)
 
 staffFromProgress :: [StaffInProgress] -> String
 staffFromProgress [] = error "instrument with zero staves, should never happen"
@@ -597,7 +597,7 @@ polyToProgress (StaffEvent e) = StaffEventInProgress e' where
     multi :: MultiPitchLy
     multi = map (\ly -> (ly,Nothing,Nothing)) lys
     eWithMulti :: InTime (Note MultiPitchLy)
-    eWithMulti = e & val .~ (head (e^.val) & pitch .~ multi)
+    eWithMulti = e & val .~ (headNote "polyToProgress" (e^.val) & pitch .~ multi)
     e' = startRenderingNote eWithMulti
 
 polyFromProgress :: PolyInProgress -> String
@@ -610,7 +610,7 @@ extractStaffEvent :: NoteInProgress -> String
 extractStaffEvent (n, _) = let 
     multi = n^.pitch 
     in 
-        if (typeOfLy ((^._1) $ head $ n^.pitch) == lyEffectType)
+        if (typeOfLy ((^._1) $ headNote "extractStaffEvent" $ n^.pitch) == lyEffectType)
         then " " ++ errorRedNotehead ++ " " ++ (xNote n)
         else case multi of
                 [] -> "" -- should not happen
@@ -626,7 +626,7 @@ placeClefChanges s = s & _2 %~ placeClefChanges'h Nothing where
     placeClefChanges'h c (poly@(VoicesInProgress lins):polys) = let
         changeClef :: Clef -> PolyInProgress
         changeClef c = (StaffEventInProgress ((emptyNote & pitch .~ [(Ly (LyClefEvent c),Nothing,Nothing)]), emptyWrittenNote))
-        newClef = (head.head $ lins) ^._1.clef 
+        newClef = (headNote "placeClefChanges 2".headNote "placeClefChanges 1" $ lins) ^._1.clef 
             -- poly should have >=1 voice, lin should have >=1 notes
         in case newClef of
             Nothing -> poly:(placeClefChanges'h c polys) -- but every note should have a clef...
@@ -640,17 +640,17 @@ placeMeterChanges :: Music -> Music
 placeMeterChanges m = let
     measuresAndBeats :: Music
     measuresAndBeats = m^.filteringBy (\it -> 
-        (it^.val.pitch & typeOfLy) == (typeOf LyMeasureEvent) ||  
-        (it^.val.pitch & typeOfLy) == (typeOf LyBeatEvent))
+        (it^.val.pitch & typeOfLy) == lyMeasureEventType ||  
+        (it^.val.pitch & typeOfLy) == lyBeatEventType)
         & sortBy (comparing (\it -> it^.t) <> 
             comparing (\it -> (it^.val.pitch & typeOfLy) == (typeOf LyBeatEvent)))
         -- sort by time, with a measure before its first beat
     notMeasuresAndBeats = m^.filteringBy (\it -> 
-        (it^.val.pitch & typeOfLy) /= (typeOf LyMeasureEvent) && 
-        (it^.val.pitch & typeOfLy) /= (typeOf LyBeatEvent))
+        (it^.val.pitch & typeOfLy) /= lyMeasureEventType && 
+        (it^.val.pitch & typeOfLy) /= lyBeatEventType)
     takeMeasures :: [Music] -> LyNote -> [Music]
     takeMeasures acc it = 
-        if (typeOfLy $ it^.val.pitch) == typeOf LyMeasureEvent
+        if (typeOfLy $ it^.val.pitch) == lyMeasureEventType
         then [it]:acc -- new measure
         else case acc of -- add beats
             [] -> [[it]]
@@ -665,7 +665,7 @@ placeMeterChanges m = let
     -- the first beat of each list should be 0
     segmentedMeasures = segmentedMeasuresAndBeats 
         & map (^.ofType lyMeasureEventType) 
-        & map head -- we shouldn't have any measures without measure events
+        & map (headNote "segmentedMeasures") -- we shouldn't have any measures without measure events
     meterStartTimes = segmentedMeasures^..traverse.t
     getMeasureDurations :: [LyNote] -> [Duration]
     getMeasureDurations [] = []
@@ -689,7 +689,7 @@ placeMeterChanges m = let
     meterChanges = map renderMeter metersToKeep
     in case notMeasuresAndBeats of
         [] -> m
-        xs -> m `parI` (meterChanges & traverse.val.line .~ ((head xs)^.val.line))
+        xs -> m `parI` (meterChanges & traverse.val.line .~ ((headNote "placeMeterChanges" xs)^.val.line))
 
 {-
 Pack the multiple notes in a ChordR into
@@ -701,7 +701,7 @@ at the first one.
 -}
 packChordsIntoMultiPitchNotes :: LinearNote -> (Note MultiPitchLy)
 packChordsIntoMultiPitchNotes [n] = n & pitch .~ [(n^.pitch,n^.acc,n^.inst)]
-packChordsIntoMultiPitchNotes ns = (head ns) & pitch .~ (zip3 (map (^.pitch) ns) (map (^.acc) ns) (map (^.inst) ns))
+packChordsIntoMultiPitchNotes ns = (headNote "packChordsIntoMultiPitchNotes" ns) & pitch .~ (zip3 (map (^.pitch) ns) (map (^.acc) ns) (map (^.inst) ns))
 
 linToProgress :: Linear -> LinearInProgress
 linToProgress lin = timePitchSort lin 

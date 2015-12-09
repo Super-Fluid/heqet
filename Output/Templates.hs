@@ -6,6 +6,7 @@ import Types
 import Text.RawString.QQ
 import Control.Lens
 import Data.List
+import Safe
 
 -- operating on music:
 basicScore :: String -> String
@@ -39,7 +40,7 @@ renderInstrumentShortNames insts = concat $ intersperse " & " $ map (^.shortName
 
 renderMidiInstrument :: [Instrument] -> String
 renderMidiInstrument [] = " "
-renderMidiInstrument insts = head insts & view midiInstrument
+renderMidiInstrument insts = headNote "renderMidiInstrument" insts & view midiInstrument
 
 basicStaff :: [Instrument] -> String -> String
 basicStaff insts contents = [r|\new Staff \with {
