@@ -37,9 +37,13 @@ renderInstrumentNames insts = concat $ intersperse " & " $ map (^.name) insts
 renderInstrumentShortNames :: [Instrument] -> String
 renderInstrumentShortNames insts = concat $ intersperse " & " $ map (^.shortName) insts
 
+renderMidiInstrument :: [Instrument] -> String
+renderMidiInstrument [] = " "
+renderMidiInstrument insts = head insts & view midiInstrument
+
 basicStaff :: [Instrument] -> String -> String
 basicStaff insts contents = [r|\new Staff \with {
-midiInstrument = "|] ++ (insts !! 0)^.midiInstrument ++ [r|"
+midiInstrument = "|] ++ renderMidiInstrument insts ++ [r|"
 instrumentName = "|] ++ renderInstrumentNames insts ++ [r|"
 shortInstrumentName = "|] ++ renderInstrumentShortNames insts ++ [r|"
 } { 
@@ -55,7 +59,7 @@ unNamedStaff contents = [r|\new Staff {
 
 pianoStaff :: [Instrument] -> [String] -> String
 pianoStaff insts substaves = [r|\new PianoStaff <<
-\set PianoStaff.midiInstrument = "|] ++ (insts !! 0)^.midiInstrument ++ [r|"
+\set PianoStaff.midiInstrument = "|] ++ renderMidiInstrument insts ++ [r|"
 \set PianoStaff.instrumentName = #"|] ++ renderInstrumentNames insts ++ [r|"
 \set PianoStaff.shortInstrumentName = #"|] ++ renderInstrumentShortNames insts ++ [r|"
 |] ++ (concat $ intersperse "\n" $ map unNamedStaff substaves) ++ [r|
