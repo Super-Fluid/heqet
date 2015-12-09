@@ -71,8 +71,14 @@ m2'3'3_8 = (concat [measure,beat,beatAt $ 2/8,beatAt $ 5/8], 7/8)
 assignMeter :: MMeter -> Music -> Music
 assignMeter = assignMeterWithLine "all"
 
-assignMeterWithLine :: String -> MMeter -> Music -> Music
-assignMeterWithLine s (rawmeter,duration) music = music ++ (meterTrack $ getStartTime music) where
+assignMeterFrom :: PointInTime -> MMeter -> Music -> Music
+assignMeterFrom pit = assignMeterWithLineFrom "all" pit
+
+assignMeter0 :: MMeter -> Music -> Music
+assignMeter0 = assignMeterWithLine0 "all"
+
+assignMeterWithLineFrom :: String -> PointInTime -> MMeter -> Music -> Music
+assignMeterWithLineFrom s pit (rawmeter,duration) music = music ++ (meterTrack pit) where
     meter = assignLine s rawmeter
     endTime = getEndTime music
     meterTrack :: PointInTime -> Music
@@ -80,6 +86,12 @@ assignMeterWithLine s (rawmeter,duration) music = music ++ (meterTrack $ getStar
         if p >= endTime
         then []
         else (startMusicAt p meter) ++ meterTrack (p+duration)
+
+assignMeterWithLine :: String -> MMeter -> Music -> Music
+assignMeterWithLine s mmeter m = assignMeterWithLineFrom s (getStartTime m) mmeter m
+
+assignMeterWithLine0 :: String -> MMeter -> Music -> Music
+assignMeterWithLine0 s mmeter m = assignMeterWithLineFrom s 0 mmeter m
 
 -- to render changes in meter, we need to go from measure and beat
 -- events to Meters

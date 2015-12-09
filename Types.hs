@@ -11,6 +11,7 @@ import Control.Lens
 import Data.Typeable
 import Data.Maybe
 import Data.Typeable
+import Data.Ratio
 
 data PitchClass = C | Cs | D | Ds | E | F | Fs | G | Gs | A | As | B
     deriving (Show, Eq, Ord, Enum, Bounded, Read)
@@ -276,6 +277,18 @@ instance Renderable LyMeterEvent where
     renderInStaff _ (LyMeterEvent (Meter num denom)) = "\n\\time " ++ show num ++ "/" ++ show denom ++ " "
     getMarkup _ = []
 
+data LyPartialEvent = LyPartialEvent Duration
+    deriving (Show,Read,Typeable,Eq)
+lyPartialEventType = typeOf (LyPartialEvent undefined)
+
+instance Renderable LyPartialEvent where
+    renderInStaff _ (LyPartialEvent d) = 
+        "\n\\partial 1*" ++ 
+        (show $ numerator d) ++ 
+        "/" ++ 
+        (show $ denominator d) ++ 
+        "\n"
+    getMarkup _ = []
 
 -- I actually can't think of any reason for this to exist?
 data LyNull = LyNull

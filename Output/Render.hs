@@ -20,6 +20,8 @@ import Data.Monoid
 import Data.Ord
 import Safe
 
+import Debug.Trace
+
 instance Renderable LyPitch where
     renderInStaff n (LyPitch p) = renderPitchAcc (p^.pc) (n^.acc) ++ renderOct (p^.oct)
     getMarkup _ = []
@@ -75,6 +77,24 @@ fixLines m = let
         [] -> assignLine "1" m
         ["all"] -> assignLine "1" m
         _ -> m
+
+{- add a pick-up into the first measure
+if appropriate. 
+-}
+addPartialIfNeeded :: Music -> Music
+addPartialIfNeeded m = let
+    firstBarline = minimumByMay (comparing (^.t)) (m^.ofType lyMeasureEventType)
+    in case firstBarline of
+        Nothing -> m
+        Just b -> let
+            startTime = getStartTime m
+            duration = b^.t - startTime
+            partial = InTime { 
+                _val = emptyNote & pitch .~ Ly (LyPartialEvent duration) & line .~ Just "all", 
+                _t = startTime,
+                _dur = 0 }
+            mWithFirstMeterAtStart = m
+            in partial:mWithFirstMeterAtStart
 
 commonDurations :: [(Duration,String)]
 commonDurations = [
@@ -367,7 +387,8 @@ allStaves m = let
     rough :: [(Maybe String, Maybe SubStaff)]
     rough = map (\x -> (x^.val.line,x^.val.subStaff)) m
     cleaned = filter (\(s, _) -> isJust s) rough
-    in cleaned & traverse._1 %~ fromJust & nub
+    specific = filter (\(s, _) -> s /= Just "all") cleaned -- "all" is not a line by itself
+    in specific & traverse._1 %~ fromJust & nub
 
 isOfThisLineAndSubStaff :: (String,Maybe SubStaff) -> LyNote -> Bool
 isOfThisLineAndSubStaff (s,ss) n = 
@@ -690,6 +711,7 @@ preRender mus = mus
     & fixLines
     & breakDurationsOverNonPlayables
     & placeMeterChanges
+    & addPartialIfNeeded
 
 allRendering :: Music -> String
 allRendering mus = mus
