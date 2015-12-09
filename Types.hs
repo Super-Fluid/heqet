@@ -79,7 +79,7 @@ type Key = (PitchClass, Mode, Maybe Accidental)
 data Mode = MajorM | MinorM -- | MajorBlues | MinorBlues | Dorian | Lydian | etc
     deriving (Eq, Show, Read)
 data SubStaff = RH | ExtraRH | LH | ExtraLH | Pedal
-    deriving (Eq, Show, Read)
+    deriving (Eq, Show, Read, Ord, Enum)
 
 data Meter = Meter Int Int
     deriving (Show,Read,Eq)
@@ -294,7 +294,7 @@ type MultiPitchLy = [(Ly,Maybe Accidental,Maybe Instrument)]
 type NoteInProgress = (Note MultiPitchLy, WrittenNote)
 type LinearInProgress = [NoteInProgress]
 data PolyInProgress = StaffEventInProgress NoteInProgress | VoicesInProgress [LinearInProgress]
-type StaffInProgress = [PolyInProgress]
+type StaffInProgress = ((Maybe String, Maybe SubStaff),[PolyInProgress])
 type ScoreInProgress = [StaffInProgress]
 type ScoreInProgressMultiStaffInstruments = [[StaffInProgress]]
 

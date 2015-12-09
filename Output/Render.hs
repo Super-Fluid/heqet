@@ -234,7 +234,16 @@ out where to put Lilypond ( and ) marks (and sometimes tenuto
 marks) to notate that articulation.
 -}
 applySlursToStaff :: StaffInProgress -> StaffInProgress
-applySlursToStaff staff = applySlursToStaff'h [] staff where
+applySlursToStaff staff = staff & _2 %~ applySlursToBlankStaff
+
+canNextPlayablePolyBeSlurredTo :: [PolyInProgress] -> [Bool]
+canNextPlayablePolyBeSlurredTo [] = []
+canNextPlayablePolyBeSlurredTo (p:ps) = case p of 
+    (VoicesInProgress lins) -> map canLinearInProgressBeSlurredTo lins
+    (StaffEventInProgress _) -> canNextPlayablePolyBeSlurredTo ps
+
+applySlursToBlankStaff :: [PolyInProgress] -> [PolyInProgress]
+applySlursToBlankStaff staff = applySlursToStaff'h [] staff where
     applySlursToStaff'h _ [] = []
     applySlursToStaff'h slurIns (poly:polys) = case poly of
         (VoicesInProgress lins) -> let
@@ -244,11 +253,6 @@ applySlursToStaff staff = applySlursToStaff'h [] staff where
             in (VoicesInProgress processedPoly) : processedRemainder
         (StaffEventInProgress _) -> poly : (applySlursToStaff'h slurIns polys)
 
-canNextPlayablePolyBeSlurredTo :: [PolyInProgress] -> [Bool]
-canNextPlayablePolyBeSlurredTo [] = []
-canNextPlayablePolyBeSlurredTo (p:ps) = case p of 
-    (VoicesInProgress lins) -> map canLinearInProgressBeSlurredTo lins
-    (StaffEventInProgress _) -> canNextPlayablePolyBeSlurredTo ps
 
 {- 
 This function basically applies slurs to each of the Linears
@@ -555,10 +559,11 @@ scoreToLy score = basicScore (concat $ score
 
 groupMultiStaffInstruments :: ScoreInProgress -> ScoreInProgressMultiStaffInstruments
 groupMultiStaffInstruments staves = let
-    
-    in map (:[]) staves
+    grouped = makeBucketsBy (\s t -> (s^._1._1) == (t^._1._1)) staves -- group by line
+    sorted = map (sortBy (comparing (^._1._2))) grouped -- sort each group by subStaff
+    in sorted
 
-staffInstruments :: StaffInProgress -> [Instrument]
+staffInstruments :: [PolyInProgress] -> [Instrument]
 staffInstruments = let
     fromNoteInProgress (n,_) = case n^.pitch of
         [(_,_,i)] -> [i]
@@ -566,19 +571,24 @@ staffInstruments = let
     fromLinearInProgress = concatMap fromNoteInProgress
     fromPolyInProgress (VoicesInProgress lins) = concatMap fromLinearInProgress lins
     fromPolyInProgress (StaffEventInProgress _) = []
-    fromStaffInProgress = concatMap fromPolyInProgress
+    fromStaffInProgress = concatMap (fromPolyInProgress)
     in catMaybes . nub . fromStaffInProgress
 
 staffToProgress :: Staff -> StaffInProgress
-staffToProgress = map polyToProgress
+staffToProgress [] = ((Nothing,Nothing), []) -- should never happen I think
+staffToProgress s = (((head s) & takeOneNote & view line ,
+                      (head s) & takeOneNote & view subStaff), map polyToProgress s) where
+    takeOneNote :: Polyphony -> Note Ly
+    takeOneNote (StaffEvent it) = head (it^.val)
+    takeOneNote (Voices its) = head ((head $ head its)^.val)
 
 staffFromProgress :: [StaffInProgress] -> String
 staffFromProgress [] = error "instrument with zero staves, should never happen"
-staffFromProgress [staff] = basicStaff (staffInstruments staff) (plainStaffFromProgress staff)
-staffFromProgress staves = pianoStaff (staffInstruments (concat staves)) (map plainStaffFromProgress staves)
+staffFromProgress [staff] = basicStaff (staffInstruments (staff^._2)) (plainStaffFromProgress staff)
+staffFromProgress staves = pianoStaff (staffInstruments (concatMap (^._2) staves)) (map plainStaffFromProgress staves)
 
 plainStaffFromProgress :: StaffInProgress -> String
-plainStaffFromProgress staff = concat $ intersperse " " $ map polyFromProgress staff
+plainStaffFromProgress staff = concat $ intersperse " " $ map polyFromProgress (staff^._2)
 
 polyToProgress :: Polyphony -> PolyInProgress
 polyToProgress (Voices lins) = VoicesInProgress $ map linToProgress lins
@@ -608,8 +618,8 @@ extractStaffEvent (n, _) = let
         -- we only care about the first one because there should only be one
 
 placeClefChanges :: StaffInProgress -> StaffInProgress
-placeClefChanges = placeClefChanges'h Nothing where
-    placeClefChanges'h :: (Maybe Clef) -> StaffInProgress -> StaffInProgress
+placeClefChanges s = s & _2 %~ placeClefChanges'h Nothing where
+    placeClefChanges'h :: (Maybe Clef) -> [PolyInProgress] -> [PolyInProgress]
     placeClefChanges'h _ [] = []
     placeClefChanges'h c ((StaffEventInProgress e):polys) = 
         (StaffEventInProgress e):(placeClefChanges'h c polys)
@@ -748,7 +758,7 @@ allRenderingForGrace n mus = mus
     & (map) reverseLinearsInPoly -- put each Linear in order
     & (map) removeEmptyLinears -- remove empty Linears from each Polyphony
     & map polyToProgress
-    & applySlursToStaff
+    & applySlursToBlankStaff
     & map polyFromProgress
     & intersperse " " 
     & concat
