@@ -614,8 +614,8 @@ extractStaffEvent (n, _) = let
         then " " ++ errorRedNotehead ++ " " ++ (xNote n)
         else case multi of
                 [] -> "" -- should not happen
-                ((Ly a,_,_):_) -> renderInStaff n a
-        -- we only care about the first one because there should only be one
+                xs -> concat $ intersperse " " $ map (\(Ly a,_,_) -> renderInStaff n a) xs
+        --  there should only be one though, map just to be careful
 
 placeClefChanges :: StaffInProgress -> StaffInProgress
 placeClefChanges s = s & _2 %~ placeClefChanges'h Nothing where
