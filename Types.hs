@@ -193,45 +193,88 @@ data LyPitch = LyPitch Pitch
     deriving (Show,Read,Typeable)
 lyPitchType = typeOf (LyPitch undefined)
 
+-- see Render for Renderable instance
+
 data LyRest = LyRest
     deriving (Show,Read,Typeable,Eq)
 lyRestType = typeOf (LyRest)
+
+instance Renderable LyRest where
+    renderInStaff _ _ = "r"
+    getMarkup _ = []
 
 data LyPerc = LyPerc Perc
     deriving (Show,Read,Typeable,Eq)
 lyPercType = typeOf (LyPerc undefined)
 
+-- see Render for Renderable instance
+
 data LyEffect = LyEffect
     deriving (Show,Read,Typeable,Eq)
 lyEffectType = typeOf (LyEffect)
+
+-- see Render for Renderable instance
 
 data LyLyric = LyLyric Lyric
     deriving (Show,Read,Typeable)
 lyLyricType = typeOf (LyLyric undefined)
 
+-- see Render for Renderable instance
+
 data LyGrace = LyGrace Music
     deriving (Show,     Typeable   )
 lyGraceType = typeOf (LyGrace undefined)
+
+-- see Render for Renderable instance
 
 data LyMeasureEvent = LyMeasureEvent
     deriving (Show,Read,Typeable,Eq)
 lyMeasureEventType = typeOf (LyMeasureEvent)
 
+instance Renderable LyMeasureEvent where
+    renderInStaff _ _ = " |\n "
+    getMarkup _ = []
+
 data LyBeatEvent = LyBeatEvent
     deriving (Show,Read,Typeable,Eq)
 lyBeatEventType = typeOf (LyBeatEvent)
+
+instance Renderable LyBeatEvent where
+    renderInStaff _ _ = ""
+    getMarkup _ = []
 
 data LyKeyEvent = LyKeyEvent Key
     deriving (Show,Read,Typeable,Eq)
 lyKeyEventType = typeOf (LyKeyEvent undefined)
 
+instance Renderable LyKeyEvent where
+    renderInStaff _ (LyKeyEvent k) = "\\key " ++ pitch ++ " " ++ mode ++ " " where
+        pitch = "c"
+        mode = "major"
+    getMarkup _ = []
+
 data LyClefEvent = LyClefEvent Clef
     deriving (Show,Read,Typeable,Eq)
 lyClefEventType = typeOf (LyClefEvent undefined)
 
+instance Renderable LyClefEvent where
+    renderInStaff _ (LyClefEvent c) = "\\clef " ++ clef ++ " " where
+        clef = case c of
+            Treble -> "treble"
+            Alto -> "alto"
+            Tenor -> "tenor"
+            Bass -> "bass"
+            Treble8 -> "\"treble_8\""
+            CustomClef s -> s -- let's hope the user knows what they're doing
+    getMarkup _ = []
+
 data LyMeterEvent = LyMeterEvent Meter
     deriving (Show,Read,Typeable,Eq)
 lyMeterEventType = typeOf (LyMeterEvent undefined)
+
+instance Renderable LyMeterEvent where
+    renderInStaff _ (LyMeterEvent (Meter num denom)) = "\n\\time " ++ show num ++ "/" ++ show denom ++ " "
+    getMarkup _ = []
 
 
 -- I actually can't think of any reason for this to exist?

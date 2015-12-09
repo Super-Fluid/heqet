@@ -24,10 +24,6 @@ instance Renderable LyPitch where
     renderInStaff n (LyPitch p) = renderPitchAcc (p^.pc) (n^.acc) ++ renderOct (p^.oct)
     getMarkup _ = []
 
-instance Renderable LyRest where
-    renderInStaff _ _ = "r"
-    getMarkup _ = []
-
 instance Renderable LyPerc where
     renderInStaff n _ = xNote n
     getMarkup (LyPerc s) = [markupText s]
@@ -42,35 +38,6 @@ instance Renderable LyLyric where
 
 instance Renderable LyGrace where
     renderInStaff n (LyGrace mus) = "\\grace {" ++ allRenderingForGrace n mus ++ "}"
-    getMarkup _ = []
-
-instance Renderable LyMeasureEvent where
-    renderInStaff _ _ = " |\n "
-    getMarkup _ = []
-
-instance Renderable LyKeyEvent where
-    renderInStaff _ (LyKeyEvent k) = "\\key " ++ pitch ++ " " ++ mode ++ " " where
-        pitch = "c"
-        mode = "major"
-    getMarkup _ = []
-
-instance Renderable LyBeatEvent where
-    renderInStaff _ _ = ""
-    getMarkup _ = []
-
-instance Renderable LyClefEvent where
-    renderInStaff _ (LyClefEvent c) = "\\clef " ++ clef ++ " " where
-        clef = case c of
-            Treble -> "treble"
-            Alto -> "alto"
-            Tenor -> "tenor"
-            Bass -> "bass"
-            Treble8 -> "\"treble_8\""
-            CustomClef s -> s -- let's hope the user knows what they're doing
-    getMarkup _ = []
-
-instance Renderable LyMeterEvent where
-    renderInStaff _ (LyMeterEvent (Meter num denom)) = "\\time " ++ show num ++ "/" ++ show denom ++ " "
     getMarkup _ = []
 
 -- "PRE-RENDERING"
