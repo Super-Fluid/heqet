@@ -92,6 +92,19 @@ addPartialIfNeeded m = let
                 Nothing -> m -- nothing to do
             in partial:mWithFirstMeterAtStart
 
+-- best used when applied to a single staff worth of music
+-- adds a blank instrument if none is present, so that clefs will be automatically applied
+-- assigns notes missing an instrument to Unknown if there is at least one instrument
+fixStaffInstruments :: Music -> Music
+fixStaffInstruments m = let
+    someInstruments = catMaybes $ map (^.val.inst) m
+    -- we don't bother to "nub" the list since we only really care if it's null or not
+    in case someInstruments of
+        [] -> m & traverse.val.inst .~ Just Instruments.blank
+        _ -> m & traverse.val.inst %~ (\i -> case i of 
+            Nothing -> Just Instruments.unknown
+            Just j -> Just j)
+
 commonDurations :: [(Duration,String)]
 commonDurations = [
      (1/4,"4")
@@ -699,7 +712,6 @@ linFromProgress lin = lin
 preRender :: Music -> Music
 preRender mus = mus
     & fixLines
-    & Instruments.assignAllConcertClefs
     & breakDurationsOverNonPlayables
     & placeMeterChanges
     & addPartialIfNeeded
@@ -708,6 +720,8 @@ allRendering :: Music -> String
 allRendering mus = mus
     & preRender
     & toStage0
+    & map fixStaffInstruments
+    & map Instruments.assignAllConcertClefs
     & map combineChords
     & map timePitchSort
     & map findPolys

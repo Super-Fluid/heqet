@@ -182,7 +182,7 @@ instance Playable a where
 -- import Render, which you can't always do
 -- because it can cause a cycle of imports.
 instance Renderable a where
-    renderInStaff _ _ = ""
+    renderInStaff _ _ = "UH OH"
     getMarkup _ = []
 
 data PlayInfo = PlayInfo {

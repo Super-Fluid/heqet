@@ -40,8 +40,8 @@ annotateForInstrument i m = annotateAllForInstrument i (m^.instKind (i^.kind))
 assignAllConcertClefs :: Music -> Music
 assignAllConcertClefs m = let
     instruments = whatInstruments m
-    functions = map assignConcertClefsForInstrument instruments
-    in foldl (&) m functions
+    functions = map forThatInstrument instruments
+    in concatMap ($m) functions
 
 -- assigns clefs playability for all notes
 assignConcertClefsAllForInstrument :: Instrument -> Music -> Music
@@ -49,7 +49,11 @@ assignConcertClefsAllForInstrument i m = (i^.assignConcertClefs) m
 
 -- assigns clefs for note already assigned for that KIND of instrument
 assignConcertClefsForInstrument :: Instrument -> Music -> Music
-assignConcertClefsForInstrument i m = assignConcertClefsAllForInstrument i (m^.instKind (i^.kind))
+assignConcertClefsForInstrument i m = m & instKind (i^.kind) %~ assignConcertClefsAllForInstrument i
+
+-- returns just the portion of music suitable for the inst, with clefs
+forThatInstrument :: Instrument -> Music -> Music
+forThatInstrument i m = m^.instKind (i^.kind) & (i^.assignConcertClefs)
 
 melody = Instrument { 
       _midiInstrument = "acoustic grand"
@@ -75,6 +79,20 @@ blank = Instrument {
     , _transposition = [pp| c |]
     , _name = ""
     , _shortName = ""
+    , _kind = "Abstract"
+    , _nSubStaves = 1
+    }
+
+unknown = Instrument { 
+      _midiInstrument = "acoustic grand"
+    , _pickUpTime = 0
+    , _putDownTime = 0
+    , _annotatePlayability = id
+    , _assignConcertClefs = bassOrTreble
+    , _assignWrittenClefs = bassOrTreble
+    , _transposition = [pp| c |]
+    , _name = "Unknown"
+    , _shortName = "?"
     , _kind = "Abstract"
     , _nSubStaves = 1
     }

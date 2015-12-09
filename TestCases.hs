@@ -80,6 +80,11 @@ meters8 = let
 
 partial = [music| b,8 c8 d e f g a b c'|] & startMusicAt (-1/8) & assignMeter0 m4_4 & traverse.val.inst .~ Just Instruments.horn
 
+fluba = let 
+    a = [music| c8 d e f g a |] & traverse.val.inst .~ Just Instruments.flute
+    b = [music| f8 e d c b a g b c |] & traverse.val.inst .~ Just Instruments.tuba
+    in (a `seqI` b `seqI` a)
+
 basicPiano = [music| << { c1 } \\ {c''4 d''4 e'' f''} >> c8 e g c' e' g' c'' e'' c'''1 |]
 --    & assignMeter m4_4
     & superBasicSplit
