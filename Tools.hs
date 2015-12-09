@@ -13,6 +13,9 @@ import Data.Monoid
 import Data.Ord
 import Safe
 import Data.Typeable
+import LyInstances
+
+import Debug.Trace
 
 mapOverNotes :: (Note a -> Note a) -> MusicOf a -> MusicOf a
 mapOverNotes = map . fmap
@@ -20,7 +23,7 @@ mapOverNotes = map . fmap
 startMusicAt :: PointInTime -> MusicOf a -> MusicOf a
 startMusicAt _ [] = []
 startMusicAt pit mus = let
-    currentStartTime = minimum (mus ^..traverse.t)
+    currentStartTime = minimum $ (mus ^..traverse.t)
     shift = pit - currentStartTime
     in mus & traverse.t %~ (+shift)
 
@@ -52,7 +55,7 @@ getEndTime :: Music -> Duration
 getEndTime its = maximum $ map (\it -> (it^.t) + (it^.dur)) (filter (\it -> it^.val.pitch & isPlayable) its)
 
 getStartTime :: Music -> Duration
-getStartTime its = minimum $ map (\it -> (it^.t)) (filter (\it -> it^.val.pitch & isPlayable) its)
+getStartTime its = traceShow its $ minimum $ map (\it -> (it^.t)) (filter (\it -> it^.val.pitch & isPlayable) its)
 
 {-
 takeMusic :: PointInTime -> Lens' Music Music
@@ -129,3 +132,13 @@ seqI m1 m2 = m1 ++ (startMusicAt (getEndTime m1) m2)
 
 -- (I stands for InTime)
 
+getPitchHeight :: Pitch -> Maybe Double
+getPitchHeight = Just . pitch2double --from LyInstances
+
+getLyHeight :: Ly -> Maybe Double
+getLyHeight (Ly a) = do
+    i <- info a
+    i^.pitchHeight
+
+getNoteHeight :: LyNote -> Maybe Double
+getNoteHeight it = it^.val.pitch & getLyHeight
