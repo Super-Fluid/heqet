@@ -93,7 +93,11 @@ addPartialIfNeeded m = let
                 _val = emptyNote & pitch .~ Ly (LyPartialEvent duration) & line .~ Just "all", 
                 _t = startTime,
                 _dur = 0 }
-            mWithFirstMeterAtStart = m
+            firstMeterMay = minimumByMay (comparing (^.t)) (m^.ofType lyMeterEventType)
+            mWithFirstMeterAtStart = case firstMeterMay of
+                Just firstMeter -> (firstMeter & t .~ startTime):
+                    (filter (\it -> it^.t /= b^.t || (it^.val.pitch & typeOfLy) /= lyMeterEventType) m)
+                Nothing -> m -- nothing to do
             in partial:mWithFirstMeterAtStart
 
 commonDurations :: [(Duration,String)]
