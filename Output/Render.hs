@@ -20,6 +20,7 @@ import Control.Applicative
 import Data.Monoid
 import Data.Ord
 import Safe
+import Data.Ratio
 
 instance Renderable LyPerc where
     renderInStaff n _ = xNote n
@@ -132,8 +133,8 @@ commonDurations = [
 renderDuration :: Duration -> String
 renderDuration dur
     | isJust (lookup dur commonDurations) = fromJustNote "renderDuration" (lookup dur commonDurations)
-    | dur == 0 = ""
-    | otherwise = "1"
+    | dur == 0 = "1*0/1"
+    | otherwise = "1*" ++ (show $ numerator dur) ++ "/" ++ (show $ denominator dur)
 
 startRenderingNote :: InTime (Note MultiPitchLy) -> NoteInProgress
 startRenderingNote it = (it^.val, WrittenNote [] [] "" (it^.dur) [] [] False)
