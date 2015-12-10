@@ -21,6 +21,8 @@ import Data.Monoid
 import Data.Ord
 import Safe
 
+import Debug.Trace
+
 instance Renderable LyPerc where
     renderInStaff n _ = xNote n
     getMarkup (LyPerc s) = [markupText s]
@@ -401,7 +403,13 @@ isOfThisLineAndSubStaff (s,ss) n =
 
 -- Inserts rests into a STAFF of music where there are gaps
 insertRests :: Music -> Music
-insertRests m = m & measures.traverse.startingMusicAtZero.playables %~ (\bar -> let
+insertRests m = let 
+    ms = m^.measures
+    notation = m^.notPlayables
+    in notation `parI` concatMap insertRestsIntoMeasure ms
+
+insertRestsIntoMeasure :: Music -> Music
+insertRestsIntoMeasure bar = let
     sorted = sortBy (comparing (^.t)) bar
     noOldRests = filter (\it -> (it^.val.pitch & typeOfLy) /= lyRestType) sorted
     f :: Music -> LyNote -> Music
@@ -423,7 +431,6 @@ insertRests m = m & measures.traverse.startingMusicAtZero.playables %~ (\bar -> 
             we wait until after the notes are put into Polys
             and process each voice of the Poly separately -}
     in foldl f [] noOldRests
-    )
 
 isChordable :: InTime (Note Ly) -> InTime (Note Ly) -> Bool
 isChordable it1 it2 = (it1^.dur == it2^.dur) && (it1^.t == it2^.t) &&

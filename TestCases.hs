@@ -89,3 +89,5 @@ basicPiano = [music| << { c1 } \\ {c''4 d''4 e'' f''} >> c8 e g c' e' g' c'' e''
 --    & assignMeter m4_4
     & superBasicSplit
     & traverse.val.inst .~ Just Instruments.piano
+
+tuningNote = [music| a'1\fermata |] & traverse.val.inst .~ Just Instruments.oboe
