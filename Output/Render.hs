@@ -399,6 +399,32 @@ isOfThisLineAndSubStaff (s,ss) n =
     && 
     (n^.val.subStaff == ss)
 
+-- Inserts rests into a STAFF of music where there are gaps
+insertRests :: Music -> Music
+insertRests m = m & measures.traverse.startingMusicAtZero.playables %~ (\bar -> let
+    sorted = sortBy (comparing (^.t)) bar
+    noOldRests = filter (\it -> (it^.val.pitch & typeOfLy) /= lyRestType) sorted
+    f :: Music -> LyNote -> Music
+    f [] it = 
+        if it^.t == 0 
+        then [it]
+        else [it,    it & t .~ 0 & dur .~ (it^.t) & val.pitch .~ Ly LyRest ]
+    f (recent:past) it
+        | it^.t == prevEndTime   = it:recent:past -- notes line up perfectly
+        | it^.t > prevEndTime    = it:newRest:recent:past  -- gap
+        | otherwise   = it:recent:past  -- overlap
+            where
+            newRest = it 
+                & t .~ prevEndTime 
+                & dur .~ (it^.t - prevEndTime) 
+                & val.pitch .~ Ly LyRest
+            prevEndTime = recent^.t + recent^.dur
+        {- We don't try to fit in a rest now. Rather,
+            we wait until after the notes are put into Polys
+            and process each voice of the Poly separately -}
+    in foldl f [] noOldRests
+    )
+
 isChordable :: InTime (Note Ly) -> InTime (Note Ly) -> Bool
 isChordable it1 it2 = (it1^.dur == it2^.dur) && (it1^.t == it2^.t) &&
     (it1^.val.isSlurred == it2^.val.isSlurred) &&
@@ -722,6 +748,7 @@ allRendering mus = mus
     & toStage0
     & map fixStaffInstruments
     & map Instruments.assignAllConcertClefs
+    & map insertRests
     & map combineChords
     & map timePitchSort
     & map findPolys
