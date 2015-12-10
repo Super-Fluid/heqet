@@ -86,8 +86,15 @@ fluba = let
     in (a `seqI` b `seqI` a)
 
 basicPiano = [music| << { c1 } \\ {c''4 d''4 e'' f''} >> c8 e g c' e' g' c'' e'' c'''1 |]
---    & assignMeter m4_4
+    & assignMeter m4_4
     & superBasicSplit
     & traverse.val.inst .~ Just Instruments.piano
 
 tuningNote = [music| a'1\fermata |] & traverse.val.inst .~ Just Instruments.oboe
+
+simpleRest = [music| c''2. r4 d''2. r8 r |] & assignMeter m4_4
+
+moreRest = let 
+    a = [music| c''2. r4 d''2. r8 r |]
+    b = [music| c2. r4 d2. r8 r |]
+    in (a `parI` b) & assignMeter m4_4 & superBasicSplit 

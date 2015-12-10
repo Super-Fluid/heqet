@@ -15,6 +15,8 @@ import Safe
 import Data.Typeable
 import LyInstances
 
+import Debug.Trace
+
 mapOverNotes :: (Note a -> Note a) -> MusicOf a -> MusicOf a
 mapOverNotes = map . fmap
 
@@ -146,7 +148,7 @@ annotatedMeasures = lens f (\_ bars -> concat (bars^..traverse._2)) where
             if typeOfLy (it^.val.pitch) == lyMeasureEventType
             then (it^.t,[it],it^.t):(startT,current,currentEndT):past
             else (startT,it:current,it^.t + it^.dur):past
-        in foldl f'h [] sorted
+        in traceShowId $ foldl f'h [] sorted
 
 -- split by notes with meet the predicate, so each
 -- segment starts with one such note, except for

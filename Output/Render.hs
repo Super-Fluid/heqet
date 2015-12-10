@@ -408,7 +408,7 @@ insertRests m = let
 
 insertRestsIntoMeasure :: (PointInTime,Music,PointInTime) -> Music
 insertRestsIntoMeasure (barStart,bar,barEnd) = let
-    playableNotes = bar^.playables
+    playableNotes = traceShow (barStart,barEnd) $ bar^.playables -- trace ('\n':(show (barStart,bar^..traverse.val.pitch,barEnd))) $
     otherNotation = bar^.notPlayables
     sorted = sortBy (comparing (^.t)) playableNotes
     noOldRests = filter (\it -> (it^.val.pitch & typeOfLy) /= lyRestType) sorted
@@ -416,7 +416,7 @@ insertRestsIntoMeasure (barStart,bar,barEnd) = let
     f [] it = 
         if it^.t == barStart 
         then [it]
-        else [it,    it & t .~ 0 & dur .~ (it^.t) & val.pitch .~ Ly LyRest ]
+        else [it,    it & t .~ barStart & dur .~ (it^.t - barStart) & val.pitch .~ Ly LyRest ]
     f (recent:past) it
         | it^.t == prevEndTime   = it:recent:past -- notes line up perfectly
         | it^.t > prevEndTime    = it:newRest:recent:past  -- gap
@@ -721,7 +721,7 @@ placeMeterChanges m = let
     getMeasureDurations [it] = [(getEndTime m) - (it^.t)]
     getMeasureDurations (this:next:more) = (next^.t - this^.t):(getMeasureDurations (next:more))
     durParts = getMeasureDurations segmentedMeasures
-    signatures = zip beatPartsFrom0 durParts
+    signatures = traceShowId $ zip beatPartsFrom0 durParts
     maybeMeters = map (\x -> lookup x meterTable) signatures
     metersToKeep = removeAdjacentDuplicatesBy (\(a,_) (b,_) ->
         isJust a && isJust b && fromJust a == fromJust b
@@ -729,7 +729,7 @@ placeMeterChanges m = let
     renderMeter :: ((Maybe LyMeterEvent),PointInTime) -> LyNote
     renderMeter (Nothing,pit) = InTime {
         _val = emptyNote & pitch .~ (Ly LyEffect) & errors %~ ("unknown meter":)
-        ,_dur = 1
+        ,_dur = 0
         ,_t = pit }
     renderMeter ((Just meter),pit) = InTime {
         _val = emptyNote & pitch .~ (Ly meter)
@@ -771,13 +771,13 @@ preRender :: Music -> Music
 preRender mus = mus
     & fixLines
     & breakDurationsOverNonPlayables
-    & placeMeterChanges
-    & addPartialIfNeeded
 
 allRendering :: Music -> String
 allRendering mus = mus
     & preRender
     & toStage0
+    & map placeMeterChanges
+    & map addPartialIfNeeded
     & map fixStaffInstruments
     & map Instruments.assignAllConcertClefs
     & map insertRests
