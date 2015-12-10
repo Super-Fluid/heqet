@@ -21,12 +21,22 @@ mapOverNotes = map . fmap
 startMusicAt :: PointInTime -> MusicOf a -> MusicOf a
 startMusicAt _ [] = []
 startMusicAt pit mus = let
-    currentStartTime = minimum $ (mus ^..traverse.t)
+    currentStartTime = minimumDef 0 $ (mus ^..traverse.t)
     shift = pit - currentStartTime
     in mus & traverse.t %~ (+shift)
 
 startMusicAtZero :: MusicOf a -> MusicOf a
 startMusicAtZero = startMusicAt 0
+
+startingMusicAt :: PointInTime -> Lens' (MusicOf a) (MusicOf a)
+startingMusicAt pit = let 
+    h = lens 
+        (\m -> (startMusicAt pit m,minimumDef 0 $ (m ^..traverse.t))) 
+        (\_ (m,oldStartTime) -> startMusicAt oldStartTime m)
+    in h._1 -- hide the saved oldStartTime
+
+startingMusicAtZero :: Lens' (MusicOf a) (MusicOf a)
+startingMusicAtZero = startingMusicAt 0
 
 assignLine :: String -> Music -> Music
 assignLine s m = m & traverse.val.line .~ Just s
