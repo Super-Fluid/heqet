@@ -126,6 +126,28 @@ measures = lens f (\_ bars -> concat bars) where
             else (it:current):past
         in foldl f'h [] sorted
 
+annotatedMeasures :: Lens' Music [(PointInTime,Music,PointInTime)]
+annotatedMeasures = lens f (\_ bars -> concat (bars^..traverse._2)) where
+    f :: Music -> [(PointInTime,Music,PointInTime)]
+    -- our algorithm will be to take notes one by one
+    -- and spawn a new measure whenever we find a 
+    -- measure event
+    f m = let
+        sorted = sortBy (comparing (\it -> (it^.t,it^.val.pitch 
+                                            & typeOfLy 
+                                            & (/= lyMeasureEventType)
+                                           )
+                                    )
+                        ) m
+        -- sort by time, with measure events coming first (because False < True)
+        f'h :: [(PointInTime,Music,PointInTime)] -> LyNote -> [(PointInTime,Music,PointInTime)]
+        f'h [] it = [(it^.t,[it],it^.t + it^.dur)]
+        f'h ((startT,current,currentEndT):past) it = 
+            if typeOfLy (it^.val.pitch) == lyMeasureEventType
+            then (it^.t,[it],it^.t):(startT,current,currentEndT):past
+            else (startT,it:current,it^.t + it^.dur):past
+        in foldl f'h [] sorted
+
 -- split by notes with meet the predicate, so each
 -- segment starts with one such note, except for
 -- the first segment

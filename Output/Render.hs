@@ -21,8 +21,6 @@ import Data.Monoid
 import Data.Ord
 import Safe
 
-import Debug.Trace
-
 instance Renderable LyPerc where
     renderInStaff n _ = xNote n
     getMarkup (LyPerc s) = [markupText s]
@@ -404,17 +402,18 @@ isOfThisLineAndSubStaff (s,ss) n =
 -- Inserts rests into a STAFF of music where there are gaps
 insertRests :: Music -> Music
 insertRests m = let 
-    ms = m^.measures
-    notation = m^.notPlayables
-    in notation `parI` concatMap insertRestsIntoMeasure ms
+    ms = m^.annotatedMeasures
+    in concatMap insertRestsIntoMeasure ms
 
-insertRestsIntoMeasure :: Music -> Music
-insertRestsIntoMeasure bar = let
-    sorted = sortBy (comparing (^.t)) bar
+insertRestsIntoMeasure :: (PointInTime,Music,PointInTime) -> Music
+insertRestsIntoMeasure (barStart,bar,barEnd) = let
+    playableNotes = bar^.playables
+    otherNotation = bar^.notPlayables
+    sorted = sortBy (comparing (^.t)) playableNotes
     noOldRests = filter (\it -> (it^.val.pitch & typeOfLy) /= lyRestType) sorted
     f :: Music -> LyNote -> Music
     f [] it = 
-        if it^.t == 0 
+        if it^.t == barStart 
         then [it]
         else [it,    it & t .~ 0 & dur .~ (it^.t) & val.pitch .~ Ly LyRest ]
     f (recent:past) it
@@ -430,7 +429,32 @@ insertRestsIntoMeasure bar = let
         {- We don't try to fit in a rest now. Rather,
             we wait until after the notes are put into Polys
             and process each voice of the Poly separately -}
-    in foldl f [] noOldRests
+    mostOfProcessedBar = foldl f [] noOldRests
+    finishingRest = case mostOfProcessedBar of
+        [] -> case otherNotation of -- if there were no notes in the bar
+            [] -> InTime { -- if there was nothing at all, which can only 
+                            -- happen if there were no measure or partial
+                            -- meaning that this is the whole piece of 
+                            -- music so the music is empty...
+                     _t = barStart 
+                    ,_dur = barEnd - barStart
+                    ,_val = emptyNote & pitch .~ Ly LyRest
+                  }
+            _ -> (head otherNotation) -- else there were some non-playables
+                & t .~ barStart  -- so we use one of them as the template to get the line etc
+                & dur .~ barEnd - barStart
+                & val.pitch .~ Ly LyRest
+        (last:_) -> last -- else there are notes in the bar, we want the last
+                    -- which we know will be the head because the fold
+                    -- reversed the ordering and it started in
+                    -- chronological order.
+            & t .~ (last^.t + last^.dur)
+            & dur .~ barEnd - (last^.t + last^.dur)
+            & val.pitch .~ Ly LyRest
+    in 
+        if finishingRest^.dur == 0
+        then mostOfProcessedBar
+        else finishingRest:mostOfProcessedBar
 
 isChordable :: InTime (Note Ly) -> InTime (Note Ly) -> Bool
 isChordable it1 it2 = (it1^.dur == it2^.dur) && (it1^.t == it2^.t) &&
