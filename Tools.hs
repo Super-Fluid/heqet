@@ -37,14 +37,32 @@ eraseLine m = m & traverse.val.line .~ Nothing
 ofLine :: String -> Lens' Music Music
 ofLine v = filteringBy (\it -> it^.val.line == Just v)
 
+notOfLine :: String -> Lens' Music Music
+notOfLine v = filteringBy (\it -> it^.val.line /= Just v)
+
 instName :: String -> Lens' Music Music
 instName v = filteringBy (\it -> ((^.name) <$> it^.val.inst) == Just v)
+
+notInstName :: String -> Lens' Music Music
+notInstName v = filteringBy (\it -> ((^.name) <$> it^.val.inst) /= Just v)
 
 instKind :: String -> Lens' Music Music
 instKind v = filteringBy (\it -> ((^.kind) <$> it^.val.inst) == Just v)
 
+notInstKind :: String -> Lens' Music Music
+notInstKind v = filteringBy (\it -> ((^.kind) <$> it^.val.inst) /= Just v)
+
 ofType :: TypeRep -> Lens' Music Music
 ofType t = filteringBy (\it -> (it^.val.pitch & typeOfLy) == t)
+
+notOfType :: TypeRep -> Lens' Music Music
+notOfType t = filteringBy (\it -> (it^.val.pitch & typeOfLy) /= t)
+
+playables :: Lens' Music Music
+playables = filteringBy (\it -> it^.val.pitch & isPlayable)
+
+notPlayables :: Lens' Music Music
+notPlayables = filteringBy (\it -> it^.val.pitch & isPlayable & not)
 
 timeSort :: [InTime a] -> [InTime a]
 timeSort = sortBy $ \it1 it2 -> (it1^.t) `compare` (it2^.t)
@@ -55,15 +73,22 @@ getEndTime its = maximum $ map (\it -> (it^.t) + (it^.dur)) (filter (\it -> it^.
 getStartTime :: Music -> Duration
 getStartTime its = minimum $ map (\it -> (it^.t)) (filter (\it -> it^.val.pitch & isPlayable) its)
 
-{-
 takeMusic :: PointInTime -> Lens' Music Music
-takeMusic pit mus = lens (mapMaybe f) (\s a -> a++s) where
+takeMusic pit = lens (mapMaybe f) (\s a -> a++s) where
     f it
         | it^.t >= pit = Nothing
         | it^.t + it^.dur <= pit = Just it
         | otherwise = Just $ it & dur .~ (pit - it^.t) & val.isTied .~ True
--}
---dropMusic :: PointInTime -> MusicOf a -> MusicOf a
+
+dropMusic :: PointInTime -> Lens' Music Music
+dropMusic pit = lens (mapMaybe f) (\s a -> a++s) where
+    f it
+        | it^.t >= pit = Just it
+        | it^.t + it^.dur < pit = Nothing
+        | otherwise = Just $ it & dur .~ (it^.t + it^.dur - pit) & t .~ pit
+
+sliceMusic :: PointInTime -> PointInTime -> Lens' Music Music
+sliceMusic from to = (takeMusic to).(dropMusic from)
 
 --reverseMusic :: MusicOf a -> MusicOf a
 {-
