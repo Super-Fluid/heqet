@@ -745,6 +745,8 @@ We assume that all the notes in a Grace belong with this voice.
 -}
 allRenderingForGrace :: Note MultiPitchLy -> Music -> String
 allRenderingForGrace n mus = mus
+    & fixLines
+    & breakDurationsOverNonPlayables
     & combineChords
     & timePitchSort
     & findPolys
