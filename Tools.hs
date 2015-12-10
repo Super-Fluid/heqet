@@ -90,6 +90,52 @@ dropMusic pit = lens (mapMaybe f) (\s a -> a++s) where
 sliceMusic :: PointInTime -> PointInTime -> Lens' Music Music
 sliceMusic from to = (takeMusic to).(dropMusic from)
 
+-- This includes the partial beginning measure, if present.
+-- if no measure information is present, then we'll focus on 
+-- the whole music value as a single measure, so measures
+-- are not guarantied to have a measure event or a partial event.
+measures :: Lens' Music [Music]
+measures = lens f (\_ bars -> concat bars) where
+    f :: Music -> [Music]
+    -- our algorithm will be to take notes one by one
+    -- and spawn a new measure whenever we find a 
+    -- measure event
+    f m = let
+        sorted = sortBy (comparing (\it -> (it^.t,it^.val.pitch 
+                                            & typeOfLy 
+                                            & (/= lyMeasureEventType)
+                                           )
+                                    )
+                        ) m
+        -- sort by time, with measure events coming first (because False < True)
+        f'h :: [Music] -> LyNote -> [Music]
+        f'h [] it = [[it]]
+        f'h (current:past) it = 
+            if typeOfLy (it^.val.pitch) == lyMeasureEventType
+            then [it]:current:past
+            else (it:current):past
+        in foldl f'h [] sorted
+
+-- split by notes with meet the predicate, so each
+-- segment starts with one such note, except for
+-- the first segment
+segmentedBy :: (LyNote -> Bool) -> Lens' Music [Music]
+segmentedBy pred = lens f (\_ bars -> concat bars) where
+    f :: Music -> [Music]
+    -- our algorithm will be to take notes one by one
+    -- and spawn a new measure whenever we find a 
+    -- measure event
+    f m = let
+        sorted = sortBy (comparing (^.t)) m
+        -- sort by time, with measure events coming first (because False < True)
+        f'h :: [Music] -> LyNote -> [Music]
+        f'h [] it = [[it]]
+        f'h (current:past) it = 
+            if pred it
+            then [it]:current:past
+            else (it:current):past
+        in foldl f'h [] sorted
+
 --reverseMusic :: MusicOf a -> MusicOf a
 {-
 instance Ord (InTime (Note Ly)) where
