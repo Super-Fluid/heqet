@@ -3,6 +3,7 @@
 , ExistentialQuantification
 , FlexibleInstances
 , OverlappingInstances
+, UndecidableInstances
 , DeriveDataTypeable #-}
 
 module Types where
@@ -181,8 +182,8 @@ instance Playable a where
 -- missing Renderable instances if you don't
 -- import Render, which you can't always do
 -- because it can cause a cycle of imports.
-instance Renderable a where
-    renderInStaff _ _ = "UH OH"
+instance Typeable a => Renderable a where
+    renderInStaff _ a = "UH OH (" ++ (show $ typeOf a) ++ ")"
     getMarkup _ = []
 
 data PlayInfo = PlayInfo {
