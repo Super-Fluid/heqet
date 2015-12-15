@@ -1,3 +1,4 @@
+{-# LANGUAGE TemplateHaskell, QuasiQuotes #-}
 module Split where
 
 import Types

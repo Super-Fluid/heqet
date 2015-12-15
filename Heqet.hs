@@ -8,12 +8,14 @@ module Heqet
     , module Types
     , module Dynamics
     , module Split
+    , module Output.FastRender
     ) where
 
 import Input.English
 import Types
 import Tables
 import Output.Render
+import Output.FastRender
 import Tools
 import TestCases
 import Instruments

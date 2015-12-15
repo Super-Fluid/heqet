@@ -4,6 +4,7 @@ import Output.Render
 import qualified Instruments
 import Types
 import Tools
+import Split
 
 import Control.Lens
 
@@ -13,7 +14,5 @@ in order to avoid a loop of imports
 -}
 
 writeScore = putStrLn . allRendering
-quickScore m = writeScore $ m & mapOverNotes (\x -> x
-    & line .~ Just "1"
-    & inst .~ Just Instruments.melody
-    )
+quickScore m = writeScore $ superBasicSplit $ m & traverse.val.inst .~ Just Instruments.piano
+quickLine m = writeScore $ m & traverse.val.inst .~ Just Instruments.melody

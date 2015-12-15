@@ -1,0 +1,51 @@
+name:           Heqet
+version:        0.1.0.0
+Cabal-Version:  >=1.10
+license:        GPL-3
+license-file:	License
+copyright:      Copyright (c) 2015 Isaac Reilly
+category:       Sound
+stability:      experimental
+build-type:     Custom
+author:         Isaac Reilly <isaac.g.reilly@gmail.com>
+maintainer:     Isaac Reilly <isaac.g.reilly@gmail.com>
+bug-reports:    https://github.com/Super-Fluid/heqet/issues/
+homepage:       TODO
+synopsis:       Library for music manipulation and rendering via Lilypond
+description:
+        Heqet can convert music from Euterpea, manipulate it,
+        and generate code for displaying it with Lilypond as
+        a printed score.
+extra-source-files:
+Library
+  hs-source-dirs: .
+  ghc-options: -funbox-strict-fields -fexcess-precision
+  extensions: 
+  exposed-modules:
+       Heqet, 
+       Input.Dutch, 
+       Input.English, 
+       Input.Euterpea
+  other-extensions:    
+        QuasiQuotes, 
+        OverlappingInstances, 
+        Rank2Types, 
+        FlexibleInstances, 
+        TemplateHaskell, 
+        DeriveFunctor, 
+        ExistentialQuantification, 
+        UndecidableInstances, 
+        DeriveDataTypeable
+  other-modules:
+  build-depends:
+        base >=4.7 && <4.8, 
+        lens >=4.13 && <4.14, 
+        safe >=0.3 && <0.4, 
+        template-haskell >=2.9 && <2.10, 
+        parsec >=3.1 && <3.2, 
+        Euterpea >=1.1 && <1.2, 
+        raw-strings-qq >=1.0 && <1.1
+  default-language:    Haskell2010
+source-repository head
+  type:     git
+  location: https://github.com/Super-Fluid/heqet.git
