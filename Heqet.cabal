@@ -22,27 +22,10 @@ Library
   ghc-options: -funbox-strict-fields -fexcess-precision
   extensions: 
   exposed-modules:
-       Assigners, 
-       Dynamics, 
-       Example, 
        Heqet, 
-       Instruments, 
-       List, 
-       LyInstances, 
-       Meters, 
-       Split, 
-       Tables, 
-       TestCases, 
-       Tools, 
-       Types, 
        Input.Dutch, 
        Input.English, 
-       Input.Euterpea, 
-       Input.Parse, 
-       Output.FastRender, 
-       Output.LilypondSettings, 
-       Output.Render, 
-       Output.Templates
+       Input.Euterpea
   other-extensions:    
         QuasiQuotes, 
         OverlappingInstances, 
