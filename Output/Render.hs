@@ -22,6 +22,8 @@ import Data.Ord
 import Safe
 import Data.Ratio
 
+import Debug.Trace
+
 instance Renderable LyPerc where
     renderInStaff n _ = xNote n
     getMarkup (LyPerc s) = [markupText s]
@@ -721,7 +723,7 @@ placeMeterChanges m = let
     getMeasureDurations [it] = [(getEndTime m) - (it^.t)]
     getMeasureDurations (this:next:more) = (next^.t - this^.t):(getMeasureDurations (next:more))
     durParts = getMeasureDurations segmentedMeasures
-    signatures = traceShowId $ zip beatPartsFrom0 durParts
+    signatures = zip beatPartsFrom0 durParts
     maybeMeters = map (\x -> lookup x meterTable) signatures
     metersToKeep = removeAdjacentDuplicatesBy (\(a,_) (b,_) ->
         isJust a && isJust b && fromJust a == fromJust b

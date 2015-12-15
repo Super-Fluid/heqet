@@ -148,7 +148,7 @@ annotatedMeasures = lens f (\_ bars -> concat (bars^..traverse._2)) where
             if typeOfLy (it^.val.pitch) == lyMeasureEventType
             then (it^.t,[it],it^.t):(startT,current,currentEndT):past
             else (startT,it:current,it^.t + it^.dur):past
-        in traceShowId $ foldl f'h [] sorted
+        in foldl f'h [] sorted
 
 -- split by notes with meet the predicate, so each
 -- segment starts with one such note, except for
