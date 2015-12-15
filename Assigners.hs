@@ -1,3 +1,4 @@
+{-# LANGUAGE TemplateHaskell, QuasiQuotes #-}
 module Assigners where
 
 import Types

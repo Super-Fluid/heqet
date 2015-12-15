@@ -42,9 +42,7 @@ Library
        Output.FastRender, 
        Output.LilypondSettings, 
        Output.Render, 
-       Output.Templates, 
-       Tutorial.EuterpeaUser, 
-       Tutorial.Tutorial
+       Output.Templates
   other-extensions:    
         QuasiQuotes, 
         OverlappingInstances, 
