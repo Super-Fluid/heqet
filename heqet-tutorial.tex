@@ -45,7 +45,18 @@
 \newpage
 
 \begin{section}{Heqet for Euterpea Users}
+Given a Euterpea music expression, creating a score is
+ straightforward. You will need to import \verb+Heqet+ 
+ and \verb+Heqet.Input.Euterpea+ and then apply the following functions:
+First, to convert it to a Heqet music value, 
+you should use \verb+fromEu+ or \verb+fromEu1+, which take a Euterpea \verb+Music Pitch+ or a \verb+Music Note1+ respectively. Now you can print a score to
+ stdout with the functions \verb+quickScore+ or \verb+quickLine+. \verb+quickScore+ produces a piano rendition, while \verb+quickLine+ writes a single staff. 
+ 
+ The reason that these functions perform IO is that the 
+ simplest way to use Heqet here is to write a Haskell program which outputs your Lilypond code and 
+ pipe it directly into Lilypond, which you can do by running the included \verb+heqet.sh+ bash script with your Haskell program filename as an argument. Alternatively, just load your program into GHCi and paste the output code into a Lilypond file.
 
+Now, suppose you have a score that has multiple instruments and you want to write them on separate staves with appropriate labels. If your Euterpea doesn't have instrument modifiers, you'll have to assign instruments in Heqet.
 \end{section}
 
 \begin{section}{Heqet for Lilypond Users}
