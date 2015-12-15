@@ -1,0 +1,81 @@
+\documentclass{article}
+\usepackage{booktabs}
+\usepackage{fancyhdr}
+\pagestyle{empty}
+\usepackage{graphicx}
+ \usepackage{color}
+ \usepackage{transparent}
+ \usepackage{hyperref}
+ \usepackage{lastpage}
+
+\pagestyle{fancy}
+\lhead{} % Top left header
+\chead{Heqet Report} % Top center head
+\rhead{} % Top right header
+\lfoot{} % Bottom left footer
+\cfoot{} % Bottom center footer
+\rfoot{ \thepage/\protect\pageref{LastPage}} % Bottom right footer \protect\pageref{LastPage}
+
+\newcommand{\prob}[1]{\noindent\textbf{#1.}}
+
+\begin{document}
+\pagestyle{empty}
+\begin{center}
+\vspace{3cm}
+\scalebox{1.5}{{\Huge Heqet Report}}
+
+\vspace{2cm}
+{\Large By Isaac Reilly}
+
+\vspace{0.15cm}
+{\large advised by Donya Quick}
+
+\vspace{0.1cm}
+{senior project for the Yale University major in Computer Science}
+
+\vspace{13cm}
+
+{\small fall 2015}
+
+\end{center}
+
+\pagebreak
+
+%\tableofcontents
+%\newpage
+
+\begin{section}{Blah}
+
+goals, outcomes, etc
+\end{section}
+
+
+\begin{section}{What I Learned}
+
+things I learned
+personal growth: being able to work on 
+this project, being able to pick out priorities 
+when it became clear that my goals were far too lofty
+to complete in one semester
+always surprised to have such productive conversations
+
+\end{section}
+
+
+\begin{section}{Haskell}
+haskell: only half a dozen bugs, not counting compilation errors
+I used lenses, existential types, quasiquotes, parser combinators,
+"functional programming" ie returning functions as way to clearly capture underlying thought
+(Render.hs 235)
+
+use of imports to switch languages
+
+architecture: stages of processing (parsing has a type for each stage, rendering has one in-progress type)
+
+\end{section}
+
+\begin{section}{Future Goals}
+additional goals: musical spreadsheet
+\end{section}
+
+\end{document}
