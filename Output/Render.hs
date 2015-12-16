@@ -410,7 +410,7 @@ isOfThisLineAndSubStaff :: (String,Maybe SubStaff) -> LyNote -> Bool
 isOfThisLineAndSubStaff (s,ss) n = 
     (n^.val.line == Just "all")
     ||
-    (n^.val.line == Just s && n^.val.subStaff == ss)
+    (n^.val.line == Just s && (n^.val.subStaff == ss || n^.val.subStaff == Nothing))
 
 -- Inserts rests into a STAFF of music where there are gaps
 insertRests :: Music -> Music
@@ -462,7 +462,7 @@ insertRestsIntoMeasure (barStart,bar,barEnd) = let
                     -- reversed the ordering and it started in
                     -- chronological order.
             & t .~ (last^.t + last^.dur)
-            & dur .~ barEnd - (traceShow (barStart,barEnd,last^.t,last^.dur,barEnd - (last^.t + last^.dur)) $ (last^.t + last^.dur))
+            & dur .~ barEnd - (last^.t + last^.dur)
             & val.pitch .~ Ly LyRest
     in 
         if finishingRest^.dur == 0
@@ -733,7 +733,7 @@ placeMeterChanges m = let
     getMeasureDurations [it] = [(getEndTime m) - (it^.t)]
     getMeasureDurations (this:next:more) = (next^.t - this^.t):(getMeasureDurations (next:more))
     durParts = getMeasureDurations segmentedMeasures
-    signatures = traceShowId $ zip beatPartsFrom0 durParts
+    signatures = zip beatPartsFrom0 durParts
     maybeMeters = map (\x -> lookup x meterTable) signatures
     metersToKeep = removeAdjacentDuplicatesBy (\(a,_) (b,_) ->
         isJust a && isJust b && fromJust a == fromJust b
@@ -783,11 +783,13 @@ preRender :: Music -> Music
 preRender mus = mus
     & fixLines
     & breakDurationsOverNonPlayables
+    & fixEndMeasure
 
 allRendering :: Music -> String
 allRendering mus = mus
     & preRender
     & toStage0
+    & filter (\m -> not.null $ m^.playables)
     & map placeMeterChanges
     & map addPartialIfNeeded
     & map fixStaffInstruments

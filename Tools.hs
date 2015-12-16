@@ -160,8 +160,8 @@ annotatedMeasures = lens f (\_ bars -> concat (bars^..traverse._2)) where
         f'h [] it = [(it^.t,[it],it^.t + it^.dur)]
         f'h ((startT,current,currentEndT):past) it = 
             if typeOfLy (it^.val.pitch) == lyMeasureEventType
-            then (it^.t,[it],it^.t):(startT,current,it^.t):past
-            else (startT,it:current,it^.t + it^.dur):past
+            then (it^.t,[it],it^.t):(startT,current,it^.t):past -- & trace ("new  "++(show $ it^.t))
+            else (startT,it:current,it^.t + it^.dur):past -- & trace ("old  "++(show startT)++" - "++(show $ it^.t)++", "++(show $ it^.dur))
         allMeasures = foldl f'h [] sorted
         in allMeasures & filter (\(a,_,e) -> (e - a) > 0) -- remove empty 0 dur measure at end
 
