@@ -1,9 +1,9 @@
 {-# LANGUAGE TemplateHaskell, QuasiQuotes #-}
-module Split where
+module Heqet.Split where
 
-import Types
-import Tools
-import Input.English
+import Heqet.Types
+import Heqet.Tools
+import Heqet.Input.English
 
 import Control.Lens
 

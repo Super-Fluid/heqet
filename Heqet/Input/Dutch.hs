@@ -1,12 +1,13 @@
 {-# LANGUAGE TemplateHaskell, QuasiQuotes #-}
 
-module Input.Dutch where
+module Heqet.Input.Dutch where
 
-import Input.Parse
+import Heqet.Input.Parse
+import Heqet.Tables
+
 import Language.Haskell.TH.Quote
 import Language.Haskell.TH 
 import Text.ParserCombinators.Parsec
-import Tables
 
 music :: QuasiQuoter
 music = QuasiQuoter { quoteExp = \s -> [| handleParseError $ runParser musicParser () "" s >>= (Right . allTransformations nl) |], quotePat = undefined, quoteType = undefined, quoteDec = undefined }

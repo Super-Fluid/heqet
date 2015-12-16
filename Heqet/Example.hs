@@ -1,8 +1,8 @@
 {-# LANGUAGE QuasiQuotes #-}
-module Example where
+module Heqet.Example where
 
 import Heqet
-import Input.English
+import Heqet.Input.English
 
 import Control.Lens
 

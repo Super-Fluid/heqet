@@ -1,9 +1,10 @@
 {-# LANGUAGE FlexibleInstances, OverlappingInstances, Rank2Types #-}
 
-module Tools where
+module Heqet.Tools where
 
-import Types
-import List
+import Heqet.Types
+import Heqet.List
+import Heqet.LyInstances
 
 import Control.Lens
 import Data.List
@@ -13,7 +14,6 @@ import Data.Monoid
 import Data.Ord
 import Safe
 import Data.Typeable
-import LyInstances
 
 mapOverNotes :: (Note a -> Note a) -> MusicOf a -> MusicOf a
 mapOverNotes = map . fmap

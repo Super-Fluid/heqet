@@ -1,10 +1,10 @@
-module Output.FastRender where
+module Heqet.Output.FastRender where
 
-import Output.Render
-import qualified Instruments
-import Types
-import Tools
-import Split
+import Heqet.Output.Render
+import qualified Heqet.Instruments as Instruments
+import Heqet.Types
+import Heqet.Tools
+import Heqet.Split
 
 import Control.Lens
 

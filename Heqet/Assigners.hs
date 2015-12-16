@@ -1,11 +1,11 @@
 {-# LANGUAGE TemplateHaskell, QuasiQuotes #-}
-module Assigners where
+module Heqet.Assigners where
 
-import Types
-import List
-import Tools
-import Input.English
-import LyInstances
+import Heqet.Types
+import Heqet.List
+import Heqet.Tools
+import Heqet.Input.English
+import Heqet.LyInstances
 
 import Control.Lens
 import Data.List

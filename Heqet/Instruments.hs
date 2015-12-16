@@ -1,11 +1,11 @@
 {-# LANGUAGE QuasiQuotes, OverlappingInstances #-}
 
-module Instruments where
+module Heqet.Instruments where
 
-import Types
-import Tools
-import Input.English
-import Assigners
+import Heqet.Types
+import Heqet.Tools
+import Heqet.Input.English
+import Heqet.Assigners
 
 import Control.Lens
 import Data.Maybe

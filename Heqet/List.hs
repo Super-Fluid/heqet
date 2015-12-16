@@ -1,8 +1,8 @@
 {-# LANGUAGE Rank2Types #-}
 
-module List where
+module Heqet.List where
 
-import Types
+import Heqet.Types
 
 import Control.Lens
 

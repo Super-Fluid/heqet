@@ -1,6 +1,6 @@
-module Dynamics where
+module Heqet.Dynamics where
 
-import Types
+import Heqet.Types
 
 ppp = 0.05 :: Dynamic
 pp = 0.1 :: Dynamic

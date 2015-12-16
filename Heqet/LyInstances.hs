@@ -1,9 +1,9 @@
-module LyInstances where
+module Heqet.LyInstances where
 
 -- for the Ly instances:
-import Types
-import qualified Tables
-import Output.Templates
+import Heqet.Types
+import qualified Heqet.Tables as Tables
+import Heqet.Output.Templates
 
 import Data.Tuple
 import Control.Lens

@@ -1,15 +1,15 @@
 {-# LANGUAGE TemplateHaskell, QuasiQuotes, OverlappingInstances #-}
-module Output.Render where
+module Heqet.Output.Render where
 
-import Types
-import qualified Tables
-import Output.Templates
-import Tools
-import List
-import qualified Output.LilypondSettings
-import LyInstances
-import Meters
-import qualified Instruments
+import Heqet.Types
+import qualified Heqet.Tables as Tables
+import Heqet.Output.Templates
+import Heqet.Tools
+import Heqet.List
+import qualified Heqet.Output.LilypondSettings as Output.LilypondSettings
+import Heqet.LyInstances
+import Heqet.Meters
+import qualified Heqet.Instruments as Instruments
 
 import Control.Lens
 import Data.Maybe

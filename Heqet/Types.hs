@@ -6,7 +6,7 @@
 , UndecidableInstances
 , DeriveDataTypeable #-}
 
-module Types where
+module Heqet.Types where
 
 import Control.Lens
 import Data.Typeable

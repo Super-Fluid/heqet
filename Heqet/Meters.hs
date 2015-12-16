@@ -1,7 +1,7 @@
-module Meters where
+module Heqet.Meters where
 
-import Types
-import Tools
+import Heqet.Types
+import Heqet.Tools
 
 import Control.Lens
 

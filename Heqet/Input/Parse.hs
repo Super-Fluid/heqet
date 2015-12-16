@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell, QuasiQuotes #-}
-module Input.Parse where
+module Heqet.Input.Parse where
 
 import Text.ParserCombinators.Parsec
 import Text.ParserCombinators.Parsec.Language
@@ -16,9 +16,9 @@ import Data.List
 import Data.Maybe
 import Data.Typeable
 
-import Types hiding (chord)
-import Tables
-import LyInstances
+import Heqet.Types hiding (chord)
+import Heqet.Tables
+import Heqet.LyInstances
 
 type PitchStr = String
 type DurStr = String
@@ -155,7 +155,7 @@ command = do
 leaf :: Parser Tree1
 leaf = do
     p <- pitch1
-    dur <- Input.Parse.duration
+    dur <- Heqet.Input.Parse.duration
     whiteSpace
     items <- noteItem `sepBy` whiteSpace
     whiteSpace

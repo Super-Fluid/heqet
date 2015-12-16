@@ -1,13 +1,13 @@
 {-# LANGUAGE QuasiQuotes #-}
 
-module TestCases where
+module Heqet.TestCases where
 
-import Input.English
-import Tools
-import qualified Instruments
-import Types
-import Meters
-import Split
+import Heqet.Input.English
+import Heqet.Tools
+import qualified Heqet.Instruments as Instruments
+import Heqet.Types
+import Heqet.Meters
+import Heqet.Split
 
 import Control.Lens
 
