@@ -22,8 +22,6 @@ import Data.Ord
 import Safe
 import Data.Ratio
 
-import Debug.Trace
-
 instance Renderable LyPerc where
     renderInStaff n _ = xNote n
     getMarkup (LyPerc s) = [markupText s]
