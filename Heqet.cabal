@@ -23,9 +23,9 @@ Library
   extensions: 
   exposed-modules:
        Heqet, 
-       Input.Dutch, 
-       Input.English, 
-       Input.Euterpea
+       Heqet.Input.Dutch, 
+       Heqet.Input.English, 
+       Heqet.Input.Euterpea
   other-extensions:    
         QuasiQuotes, 
         OverlappingInstances, 
