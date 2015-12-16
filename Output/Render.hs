@@ -410,7 +410,7 @@ insertRests m = let
 
 insertRestsIntoMeasure :: (PointInTime,Music,PointInTime) -> Music
 insertRestsIntoMeasure (barStart,bar,barEnd) = let
-    playableNotes = traceShow (barStart,barEnd) $ bar^.playables -- trace ('\n':(show (barStart,bar^..traverse.val.pitch,barEnd))) $
+    playableNotes = bar^.playables
     otherNotation = bar^.notPlayables
     sorted = sortBy (comparing (^.t)) playableNotes
     noOldRests = filter (\it -> (it^.val.pitch & typeOfLy) /= lyRestType) sorted
@@ -452,7 +452,7 @@ insertRestsIntoMeasure (barStart,bar,barEnd) = let
                     -- reversed the ordering and it started in
                     -- chronological order.
             & t .~ (last^.t + last^.dur)
-            & dur .~ barEnd - (last^.t + last^.dur)
+            & dur .~ barEnd - (traceShow (barStart,barEnd,last^.t,last^.dur,barEnd - (last^.t + last^.dur)) $ (last^.t + last^.dur))
             & val.pitch .~ Ly LyRest
     in 
         if finishingRest^.dur == 0

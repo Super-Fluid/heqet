@@ -142,11 +142,12 @@ annotatedMeasures = lens f (\_ bars -> concat (bars^..traverse._2)) where
                                     )
                         ) m
         -- sort by time, with measure events coming first (because False < True)
+        -- before beat events at the same times.
         f'h :: [(PointInTime,Music,PointInTime)] -> LyNote -> [(PointInTime,Music,PointInTime)]
         f'h [] it = [(it^.t,[it],it^.t + it^.dur)]
         f'h ((startT,current,currentEndT):past) it = 
             if typeOfLy (it^.val.pitch) == lyMeasureEventType
-            then (it^.t,[it],it^.t):(startT,current,currentEndT):past
+            then (it^.t,[it],it^.t):(startT,current,it^.t):past
             else (startT,it:current,it^.t + it^.dur):past
         in foldl f'h [] sorted
 
