@@ -108,6 +108,16 @@ fixStaffInstruments m = let
             Nothing -> Just Instruments.unknown
             Just j -> Just j)
 
+{-
+If the music doesn't end with a measure event,
+durations in the last measure can get messed up.
+-}
+fixEndMeasure :: Music -> Music
+fixEndMeasure m = 
+    if null $ m^.measuresAndBeats.atTime (getEndTime m)
+    then capLastMeasure m
+    else m
+
 commonDurations :: [(Duration,String)]
 commonDurations = [
      (1/4,"4")
@@ -398,9 +408,9 @@ allStaves m = let
 
 isOfThisLineAndSubStaff :: (String,Maybe SubStaff) -> LyNote -> Bool
 isOfThisLineAndSubStaff (s,ss) n = 
-    (n^.val.line == Just s || n^.val.line == Just "all")
-    && 
-    (n^.val.subStaff == ss)
+    (n^.val.line == Just "all")
+    ||
+    (n^.val.line == Just s && n^.val.subStaff == ss)
 
 -- Inserts rests into a STAFF of music where there are gaps
 insertRests :: Music -> Music
@@ -723,7 +733,7 @@ placeMeterChanges m = let
     getMeasureDurations [it] = [(getEndTime m) - (it^.t)]
     getMeasureDurations (this:next:more) = (next^.t - this^.t):(getMeasureDurations (next:more))
     durParts = getMeasureDurations segmentedMeasures
-    signatures = zip beatPartsFrom0 durParts
+    signatures = traceShowId $ zip beatPartsFrom0 durParts
     maybeMeters = map (\x -> lookup x meterTable) signatures
     metersToKeep = removeAdjacentDuplicatesBy (\(a,_) (b,_) ->
         isJust a && isJust b && fromJust a == fromJust b

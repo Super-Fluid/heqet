@@ -140,6 +140,13 @@ emptyNote = Note {
     , _subStaff = Nothing
     }
 
+emptyInTime :: LyNote
+emptyInTime = InTime {
+    _val = emptyNote
+  , _dur = 0
+  , _t = 0
+    }
+
 data Ly = forall a. (Renderable a, Playable a, Typeable a, Show a) => Ly a
     deriving (Typeable)
 

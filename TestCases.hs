@@ -90,6 +90,8 @@ basicPiano = [music| << { c1 } \\ {c''4 d''4 e'' f''} >> c8 e g c' e' g' c'' e''
     & superBasicSplit
     & traverse.val.inst .~ Just Instruments.piano
 
+basicPiano' = capLastMeasure basicPiano
+
 tuningNote = [music| a'1\fermata |] & traverse.val.inst .~ Just Instruments.oboe
 
 simpleRest = [music| c''2. r4 d''2. r8 r |] & assignMeter m4_4
