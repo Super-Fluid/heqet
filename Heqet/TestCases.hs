@@ -92,7 +92,7 @@ basicPiano = [music| << { c1 } \\ {c''4 d''4 e'' f''} >> c8 e g c' e' g' c'' e''
 
 basicPiano' = capLastMeasure basicPiano
 
-polyPiano = [music| << { c1 } \\ {c''4 d''4 e'' f''} \\ { r4 r8 g''8 bf''8 r8 r4 } >> c8 e g c' e' g' c'' e'' c'''1 |]
+polyPiano = [music| << { c1 } \\ {c''8. c''16 d''4 e'' f''} \\ { r4 r8 g''8 bf''8 r8 r4 } >> c8 e g c' e' g' c'' e'' c'''1 |]
     & assignMeter m4_4
     & superBasicSplit
     & traverse.val.inst .~ Just Instruments.piano

@@ -416,6 +416,18 @@ insertRests m = let
     ms = m^.annotatedMeasures
     in concatMap insertRestsIntoMeasure ms
 
+{- 
+Given a measure of music (or any segment),
+remove all the rests and add new ones measured
+to fill the gaps.
+
+When acting on measures, overlapping notes are treated
+as one longer note, ignoring the need to put notes
+into a Poly with rests in each voice. When this function
+is again used on each voice of a Poly, these rests are filled
+in (and the voice should contain no overlaps so there should
+be no remaining omissions).
+-}
 insertRestsIntoMeasure :: (PointInTime,Music,PointInTime) -> Music
 insertRestsIntoMeasure (barStart,bar,barEnd) = let
     playableNotes = bar^.playables
@@ -462,6 +474,57 @@ insertRestsIntoMeasure (barStart,bar,barEnd) = let
             & t .~ (last^.t + last^.dur)
             & dur .~ barEnd - (last^.t + last^.dur)
             & val.pitch .~ Ly LyRest
+    in 
+        if finishingRest^.dur == 0
+        then mostOfProcessedBar
+        else finishingRest:mostOfProcessedBar
+
+{- 
+copy and paste of above function to work with 
+Linear instead of Music. Sorry. Obviously 
+there should be an abstraction here.
+
+-}
+insertRestsIntoLinearSegment :: (PointInTime,Linear,PointInTime) -> Linear
+insertRestsIntoLinearSegment (barStart,bar,barEnd) = let
+    playableNotes = bar -- everything in the voice should be playable (?)
+    sorted = sortBy (comparing (^.t)) playableNotes
+    noOldRests = filter (\it -> (it^.val & headNote "insertRestsIntoLinearSegment" & _pitch & typeOfLy) /= lyRestType) sorted
+    f :: Linear -> (InTime LinearNote) -> Linear
+    f [] it = 
+        if it^.t == barStart 
+        then [it]
+        else [it,    it & t .~ barStart & dur .~ (it^.t - barStart) & val .~ [emptyNote & pitch .~ Ly LyRest]]
+    f (recent:past) it
+        | it^.t == prevEndTime   = it:recent:past -- notes line up perfectly
+        | it^.t > prevEndTime    = it:newRest:recent:past  -- gap
+        | otherwise   = it:recent:past  -- overlap
+            where
+            newRest = it 
+                & t .~ prevEndTime 
+                & dur .~ (it^.t - prevEndTime) 
+                & val .~ [emptyNote & pitch .~ Ly LyRest]
+            prevEndTime = recent^.t + recent^.dur
+        {- We don't try to fit in a rest now. Rather,
+            we wait until after the notes are put into Polys
+            and process each voice of the Poly separately -}
+    mostOfProcessedBar = foldl f [] noOldRests
+    finishingRest = case mostOfProcessedBar of
+        [] -> InTime { -- if there was nothing at all, which can only 
+                            -- happen if there were no measure or partial
+                            -- meaning that this is the whole piece of 
+                            -- music so the music is empty...
+                     _t = barStart 
+                    ,_dur = barEnd - barStart
+                    ,_val = [emptyNote & pitch .~ Ly LyRest]
+                  }
+        (last:_) -> last -- else there are notes in the bar, we want the last
+                    -- which we know will be the head because the fold
+                    -- reversed the ordering and it started in
+                    -- chronological order.
+            & t .~ (last^.t + last^.dur)
+            & dur .~ barEnd - (last^.t + last^.dur)
+            & val .~ [emptyNote & pitch .~ Ly LyRest]
     in 
         if finishingRest^.dur == 0
         then mostOfProcessedBar
@@ -539,6 +602,16 @@ findPolys lin = reverse $ foldl f [] (timePitchSort lin) where
 
 isLinearNotePlayable :: LinearNote -> Bool
 isLinearNotePlayable ns = any (\n -> n^.pitch & isPlayable) ns
+
+insertRestsIntoPoly :: Polyphony -> Polyphony
+insertRestsIntoPoly (StaffEvent e) = (StaffEvent e)
+insertRestsIntoPoly (Voices []) = (Voices [])
+insertRestsIntoPoly (Voices [lin]) = (Voices [lin]) -- no overlaps so nothing to do
+insertRestsIntoPoly (Voices lins) = let
+    startTime = minimumNote "insertRestsIntoPoly" $ map (\lin -> minimumNote "get start" $ lin^..traverse.t) lins
+    endTime = maximumNote "insertRestsIntoPoly" $  map (\lin -> maximumNote "get end" $ map (\it -> (it^.t) + (it^.dur)) lin) lins
+    annotatedLins = map (\lin -> (startTime,lin,endTime)) lins
+    in Voices $ map insertRestsIntoLinearSegment annotatedLins
 
 {-
 Put voices in pitch order within each poly,
@@ -799,6 +872,7 @@ allRendering mus = mus
     & (map.map) sortPoly -- puts voices in pitch order
     & (map.map) reverseLinearsInPoly -- put each Linear in order
     & (map.map) removeEmptyLinears -- remove empty Linears from each Polyphony
+    & (map.map) insertRestsIntoPoly
     & scoreToLy
 
 reverseLinearsInPoly :: Polyphony -> Polyphony
