@@ -44,10 +44,10 @@ instance Renderable LyGrace where
 {- If a note extends over a non-playable note,
 convert it into two notes tied together 
 -}
-breakDurationsOverNonPlayables :: Music -> Music
-breakDurationsOverNonPlayables mus = let
-    nonPlayables = filter (\it -> it^.val.pitch & isPlayable) mus
-    breakTimes = map (^.t) nonPlayables
+breakDurationsOverBarLinesEtc :: Music -> Music
+breakDurationsOverBarLinesEtc  mus = let
+    breakers = filter (\it -> it^.val.pitch & isDisruptive) mus
+    breakTimes = map (^.t) breakers
     breakingFunctions = map breakDurationsAtPoint breakTimes
     in foldl (&) mus breakingFunctions -- apply all the breaking functions
 
@@ -853,7 +853,7 @@ linFromProgress lin = lin
 preRender :: Music -> Music
 preRender mus = mus
     & fixLines
-    & breakDurationsOverNonPlayables
+    & breakDurationsOverBarLinesEtc
     & fixEndMeasure
 
 allRendering :: Music -> String
@@ -891,7 +891,7 @@ We assume that all the notes in a Grace belong with this voice.
 allRenderingForGrace :: Note MultiPitchLy -> Music -> String
 allRenderingForGrace n mus = mus
     & fixLines
-    & breakDurationsOverNonPlayables
+    & breakDurationsOverBarLinesEtc
     & combineChords
     & timePitchSort
     & findPolys
