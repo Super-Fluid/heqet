@@ -9,20 +9,19 @@ module Heqet
     , module Heqet.Dynamics
     , module Heqet.Split
     , module Heqet.Output.FastRender
+    , module Heqet.TestCases
+    , module Heqet.Assigners
+    , module Heqet.Meters
     ) where
 
-import Heqet.Input.English
 import Heqet.Types
-import Heqet.Tables
 import Heqet.Output.Render
 import Heqet.Output.FastRender
 import Heqet.Tools
-import Heqet.TestCases
+import qualified Heqet.TestCases
 import Heqet.Instruments
 import Heqet.Assigners
 import Heqet.Output.FastRender
 import Heqet.Meters
 import qualified Heqet.Dynamics
 import Heqet.Split
-
-import Control.Lens
