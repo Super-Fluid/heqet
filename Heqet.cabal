@@ -26,6 +26,24 @@ Library
        Heqet.Input.Dutch, 
        Heqet.Input.English, 
        Heqet.Input.Euterpea
+  other-modules:
+        Heqet.Assigners,
+        Heqet.Dynamics,
+        Heqet.Example,
+        Heqet.Input.Parse,
+        Heqet.Instruments,
+        Heqet.List,
+        Heqet.LyInstances,
+        Heqet.Meters,
+        Heqet.Output.FastRender,
+        Heqet.Output.LilypondSettings,
+        Heqet.Output.Render,
+        Heqet.Output.Templates,
+        Heqet.Split,
+        Heqet.Tables,
+        Heqet.TestCases,
+        Heqet.Tools,
+        Heqet.Types
   other-extensions:    
         QuasiQuotes, 
         OverlappingInstances, 
