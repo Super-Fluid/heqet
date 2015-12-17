@@ -625,7 +625,7 @@ sortPoly (Voices lins) = let
     indexed = sorted `zip` [1..] -- voices are 1-indexed
     odds  = map (^._1) $ filter (\(_,i) -> odd  i) indexed
     evens = map (^._1) $ filter (\(_,i) -> even i) indexed
-    in Voices $ odds ++ evens
+    in Voices sorted -- $ odds ++ evens
 sortPoly staffEvent = staffEvent
 
 {- compute the "average pitch" of
