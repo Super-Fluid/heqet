@@ -1,14 +1,31 @@
 <div style="margin: 100px auto auto auto; max-width: 550px">
-<center><h1>Heqet</h1></center>
+<center><h1>Heqet</h1>
 <h3>Isaac Reilly's senior project in Computer Science at Yale University</h3>
+<h4>Advised by Donya Quick</h4>
+</center>
 
-        Heqet can convert music from Euterpea, manipulate it,
-        and generate code for displaying it as
-        a printed score using Lilypond.
+        Abstract: Heqet is a Haskell library which converts music 
+        data created by the Euterpea library into code suitable
+        as input to the Lilypond music notation software. Heqet
+        also provides a domain-specific-language for entering music
+        directly in Haskell code, which resembles Lilypond notation
+        but diverges in some ways in accordance with how Heqet approaches
+        music, in particular, in that Heqet takes a more abstract view
+        of music, while Lilypond mixes music with its notation. In contrast,
+        Euterpea has an extremely abstract model of music, putting Heqet in
+        the middle. Creating a score is complicated and requires some
+        human intervention in assigning staves, meters, and clefs, etc. To aid
+        this effort, Heqet provides functions for manipulating music data
+        succinctly, automating these tasks as much as possible, and providing
+        the power to easily express complex transformations useful for composing
+        and arranging.
         
-        If you want to use Heqet, clone this repository (on the master branch)
+        <br /><br />
+        If you want to use Heqet, clone <a href="https://github.com/Super-Fluid/heqet">
+        this repository</a>
         and build it with cabal. Then check out my 
         <a href="./heqet-tutorial.pdf">tutorial</a>!
-        
-        If you're here to grade my project, here's my <a href="./report.pdf">report</a>.
+        <br /><br />
+        If you're here to grade my project, here's my <a href="./report.pdf">report</a>
+        and original <a href="./Proposal.pdf">proposal</a>.
 </div>
