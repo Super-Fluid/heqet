@@ -1,7 +1,7 @@
 {-# LANGUAGE QuasiQuotes #-}
-module Output.Templates where
+module Heqet.Output.Templates where
 
-import Types
+import Heqet.Types
 
 import Text.RawString.QQ
 import Control.Lens

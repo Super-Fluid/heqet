@@ -6,7 +6,7 @@
 , UndecidableInstances
 , DeriveDataTypeable #-}
 
-module Types where
+module Heqet.Types where
 
 import Control.Lens
 import Data.Typeable
@@ -140,6 +140,13 @@ emptyNote = Note {
     , _subStaff = Nothing
     }
 
+emptyInTime :: LyNote
+emptyInTime = InTime {
+    _val = emptyNote
+  , _dur = 0
+  , _t = 0
+    }
+
 data Ly = forall a. (Renderable a, Playable a, Typeable a, Show a) => Ly a
     deriving (Typeable)
 
@@ -152,6 +159,11 @@ instance Show Ly where
 class Renderable a where
     renderInStaff :: (Note MultiPitchLy) -> a -> String
     getMarkup :: a -> [String]
+    isDisruptive :: a -> Bool
+    isDisruptive = const False
+    -- disruptive means that if it appears in a staff then
+    -- all notes must break and have ties over it.
+    -- basically: bar lines, clef changes, key changes, meter changes
 
 class Playable a where
     info :: a -> Maybe PlayInfo
@@ -238,6 +250,7 @@ lyMeasureEventType = typeOf (LyMeasureEvent)
 instance Renderable LyMeasureEvent where
     renderInStaff _ _ = " |\n "
     getMarkup _ = []
+    isDisruptive _ = True
 
 data LyBeatEvent = LyBeatEvent
     deriving (Show,Read,Typeable,Eq)
@@ -256,6 +269,7 @@ instance Renderable LyKeyEvent where
         pitch = "c"
         mode = "major"
     getMarkup _ = []
+    isDisruptive _ = True
 
 data LyClefEvent = LyClefEvent Clef
     deriving (Show,Read,Typeable,Eq)
@@ -271,6 +285,7 @@ instance Renderable LyClefEvent where
             Treble8 -> "\"treble_8\""
             CustomClef s -> s -- let's hope the user knows what they're doing
     getMarkup _ = []
+    isDisruptive _ = True
 
 data LyMeterEvent = LyMeterEvent Meter
     deriving (Show,Read,Typeable,Eq)
@@ -279,6 +294,7 @@ lyMeterEventType = typeOf (LyMeterEvent undefined)
 instance Renderable LyMeterEvent where
     renderInStaff _ (LyMeterEvent (Meter num denom)) = "\n\\time " ++ show num ++ "/" ++ show denom ++ " "
     getMarkup _ = []
+    isDisruptive _ = True
 
 data LyPartialEvent = LyPartialEvent Duration
     deriving (Show,Read,Typeable,Eq)

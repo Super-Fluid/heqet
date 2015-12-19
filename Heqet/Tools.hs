@@ -1,9 +1,10 @@
 {-# LANGUAGE FlexibleInstances, OverlappingInstances, Rank2Types #-}
 
-module Tools where
+module Heqet.Tools where
 
-import Types
-import List
+import Heqet.Types
+import Heqet.List
+import Heqet.LyInstances
 
 import Control.Lens
 import Data.List
@@ -13,7 +14,6 @@ import Data.Monoid
 import Data.Ord
 import Safe
 import Data.Typeable
-import LyInstances
 
 mapOverNotes :: (Note a -> Note a) -> MusicOf a -> MusicOf a
 mapOverNotes = map . fmap
@@ -68,6 +68,16 @@ ofType t = filteringBy (\it -> (it^.val.pitch & typeOfLy) == t)
 notOfType :: TypeRep -> Lens' Music Music
 notOfType t = filteringBy (\it -> (it^.val.pitch & typeOfLy) /= t)
 
+measuresAndBeats :: Lens' Music Music
+measuresAndBeats = filteringBy (\it -> let t = (it^.val.pitch & typeOfLy) in 
+    (t == lyMeasureEventType) || (t == lyBeatEventType)
+    )
+
+noMeasuresOrBeats :: Lens' Music Music
+noMeasuresOrBeats = filteringBy (\it -> let t = (it^.val.pitch & typeOfLy) in 
+    (t /= lyMeasureEventType) && (t /= lyBeatEventType)
+    )
+
 playables :: Lens' Music Music
 playables = filteringBy (\it -> it^.val.pitch & isPlayable)
 
@@ -78,10 +88,10 @@ timeSort :: [InTime a] -> [InTime a]
 timeSort = sortBy $ \it1 it2 -> (it1^.t) `compare` (it2^.t)
 
 getEndTime :: Music -> Duration
-getEndTime its = maximum $ map (\it -> (it^.t) + (it^.dur)) (filter (\it -> it^.val.pitch & isPlayable) its)
+getEndTime its = maximumNote "getEndTime" $ map (\it -> (it^.t) + (it^.dur)) (filter (\it -> it^.val.pitch & isPlayable) its)
 
 getStartTime :: Music -> Duration
-getStartTime its = minimum $ map (\it -> (it^.t)) (filter (\it -> it^.val.pitch & isPlayable) its)
+getStartTime its = minimumNote "getStartTime" $ map (\it -> (it^.t)) (filter (\it -> it^.val.pitch & isPlayable) its)
 
 takeMusic :: PointInTime -> Lens' Music Music
 takeMusic pit = lens (mapMaybe f) (\s a -> a++s) where
@@ -99,6 +109,9 @@ dropMusic pit = lens (mapMaybe f) (\s a -> a++s) where
 
 sliceMusic :: PointInTime -> PointInTime -> Lens' Music Music
 sliceMusic from to = (takeMusic to).(dropMusic from)
+
+atTime :: PointInTime -> Lens' Music Music
+atTime pit = filteringBy (\it -> it^.t == pit)
 
 -- This includes the partial beginning measure, if present.
 -- if no measure information is present, then we'll focus on 
@@ -140,13 +153,15 @@ annotatedMeasures = lens f (\_ bars -> concat (bars^..traverse._2)) where
                                     )
                         ) m
         -- sort by time, with measure events coming first (because False < True)
+        -- before beat events at the same times.
         f'h :: [(PointInTime,Music,PointInTime)] -> LyNote -> [(PointInTime,Music,PointInTime)]
         f'h [] it = [(it^.t,[it],it^.t + it^.dur)]
         f'h ((startT,current,currentEndT):past) it = 
             if typeOfLy (it^.val.pitch) == lyMeasureEventType
-            then (it^.t,[it],it^.t):(startT,current,currentEndT):past
+            then (it^.t,[it],it^.t):(startT,current,it^.t):past
             else (startT,it:current,it^.t + it^.dur):past
-        in foldl f'h [] sorted
+        allMeasures = foldl f'h [] sorted
+        in allMeasures & filter (\(a,_,e) -> (e - a) > 0) -- remove empty 0 dur measure at end
 
 -- split by notes with meet the predicate, so each
 -- segment starts with one such note, except for
@@ -243,3 +258,19 @@ getLyHeight (Ly a) = do
 
 getNoteHeight :: LyNote -> Maybe Double
 getNoteHeight it = it^.val.pitch & getLyHeight
+
+{- 
+puts a LyMeasureEvent at the end of the music,
+which is important for rendering durations 
+correctly. 
+
+You should apply this function to the whole piece of music,
+not individual parts.
+-}
+capLastMeasure :: Music -> Music
+capLastMeasure m = let
+    cap = emptyInTime
+        & t .~ getEndTime m
+        & val.pitch .~ Ly LyMeasureEvent
+        & val.line .~ Just "all"
+    in cap:m

@@ -2,25 +2,26 @@
 
 module Heqet
     ( module Heqet
-    , module Output.Render
-    , module Tools
-    , module Instruments
-    , module Types
-    , module Dynamics
-    , module Split
+    , module Heqet.Output.Render
+    , module Heqet.Tools
+    , module Heqet.Instruments
+    , module Heqet.Types
+    , module Heqet.Dynamics
+    , module Heqet.Split
+    , module Heqet.Output.FastRender
+    , module Heqet.TestCases
+    , module Heqet.Assigners
+    , module Heqet.Meters
     ) where
 
-import Input.English
-import Types
-import Tables
-import Output.Render
-import Tools
-import TestCases
-import Instruments
-import Assigners
-import Output.FastRender
-import Meters
-import qualified Dynamics
-import Split
-
-import Control.Lens
+import Heqet.Types
+import Heqet.Output.Render
+import Heqet.Output.FastRender
+import Heqet.Tools
+import qualified Heqet.TestCases
+import Heqet.Instruments
+import Heqet.Assigners
+import Heqet.Output.FastRender
+import Heqet.Meters
+import qualified Heqet.Dynamics
+import Heqet.Split

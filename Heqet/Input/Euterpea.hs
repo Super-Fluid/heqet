@@ -1,9 +1,9 @@
-module Input.Euterpea where
+module Heqet.Input.Euterpea where
 
 import Heqet
-import qualified Euterpea as E
-import qualified Dynamics
+import qualified Heqet.Dynamics as Dynamics
 
+import qualified Euterpea as E
 import Control.Lens
 
 fromEu :: E.Music E.Pitch -> Music

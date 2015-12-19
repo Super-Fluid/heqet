@@ -1,16 +1,16 @@
-module LyInstances where
+module Heqet.LyInstances where
 
 -- for the Ly instances:
-import Types
-import qualified Tables
-import Output.Templates
+import Heqet.Types
+import qualified Heqet.Tables as Tables
+import Heqet.Output.Templates
 
 import Data.Tuple
 import Control.Lens
 import Safe
 
 pitch2double :: Pitch -> Double
-pitch2double p = (((2 ** (1/12)) ** ((fromIntegral $ ((fromEnum (p^.pc) + 3) `mod` 12)) + ((fromIntegral (p^.oct) - 4) * 12) + ((p^.cents)/100))) * 440)
+pitch2double p = (((2 ** (1/12)) ** ((fromIntegral $ ((fromEnum (p^.pc) + 3) `mod` 12)) + ((fromIntegral (p^.oct) - 4 + (if fromEnum (p^.pc) `elem` [9,10,11] then 1 else 0)) * 12) + ((p^.cents)/100))) * 440)
 
 instance Playable LyPitch where
     info (LyPitch p) = Just $ PlayInfo { 
