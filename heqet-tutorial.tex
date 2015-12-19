@@ -56,11 +56,16 @@ you should use \verb+fromEu+ or \verb+fromEu1+, which take a Euterpea \verb+Musi
  simplest way to use Heqet is to write a Haskell program which outputs your Lilypond code and 
  pipe it directly into Lilypond, which you can do by running the included \verb+heqet.sh+ bash script with your Haskell program filename as an argument. Alternatively, just load your program into GHCi and paste the output code into a Lilypond file.
 
-Now, let's try something more complicated. Suppose you have a score that has multiple instruments and you want to write them on separate staves with appropriate labels. If your Euterpea music value has instrument modifiers, you can just use \verb+writeScore+ for your output function, since Euterpea instruments are converted automatically. If you don't have instrument modifiers, or if your instruments are beyond the basic set of instruments currently recognized, you'll have to assign instruments in Heqet. The tools to manipulate music are mostly lenses, best used with the \verb+Control.Lens+ package. Lenses are a way to modify portions of a larger piece of data, for example, changing the instrument assigned to some of the notes of a music value. 
+Now, let's try something more complicated. Suppose you have a score that has multiple instruments and you want to write them on separate staves with appropriate labels. If your Euterpea music value has instrument modifiers, you can just use \verb+writeScore+ for your output function, since Euterpea instruments are converted automatically. If you don't have instrument modifiers, or if your instruments are beyond the basic set of instruments currently recognized, you'll have to assign instruments in Heqet. The tools to manipulate music are mostly lenses, best used with the \verb+Control.Lens+ package. Lenses and other ``optics'' are a way to modify portions of a larger piece of data, for example, changing the instrument assigned to some of the notes of a music value. 
 
 By the way, this is a good time to mention that in Heqet most properties of music are recorded on every single note they impact. So, every note has a field for its \verb+Maybe Instrument+. This way, you can rearrange the music as much as you want without worrying about handling the transitions between states over the course of the music---if the instrument changes, then Heqet is supposed to automatically write this direction into the part.(Actually, this isn't implemented yet. An example that does work is handling slurs: a slurred is considered to be an articulation on all but the last note in the slur. If you cut a slurred phrase in half, both halves will stay slurred correctly.) 
 
-Suppose we have a Heqet music value \verb+opus+.
+Suppose we have a Heqet music value \verb+opus+. Let's make it played by an oboe:
+
+\verb+opusWithInstruments = opus & traverse.val.inst .~ Just oboe+
+
+Quick explanation of these operators: \verb+traverse.val.inst .~ Just oboe+ is a function that can manipulate some music. \verb+&+ is a \verb+flip+ed  \verb+$+. So we're applying this function to \verb+opus+. In the middle is the ``optic'', or in this case a composition of three: \verb+traverse+, \verb+val+, and \verb+inst+. \verb+traverse+ looks at every note in the music, \verb+inst+ looks at the instrument of a note, and \verb+val+ is an implementation detail that will be hidden in future versions of Heqet. The \verb+.~+ operator means to set the value revealed by the optic, in this case setting the instrument field of every note to be \verb+Just oboe+.
+
 \end{section}
 
 \begin{section}{Heqet for Lilypond Users}
