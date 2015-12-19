@@ -64,30 +64,71 @@ Suppose we have a Heqet music value \verb+opus+. Let's make it played by an oboe
 
 \verb+opusWithInstruments = opus & traverse.val.inst .~ Just oboe+
 
-Quick explanation of these operators: \verb+traverse.val.inst .~ Just oboe+ is a function that can manipulate some music. \verb+&+ is a \verb+flip+ed  \verb+$+. So we're applying this function to \verb+opus+. In the middle is the ``optic'', or in this case a composition of three: \verb+traverse+, \verb+val+, and \verb+inst+. \verb+traverse+ looks at every note in the music, \verb+inst+ looks at the instrument of a note, and \verb+val+ is an implementation detail that will be hidden in future versions of Heqet. The \verb+.~+ operator means to set the value revealed by the optic, in this case setting the instrument field of every note to be \verb+Just oboe+.
+Quick explanation of these operators: \verb+traverse.val.inst .~ Just oboe+ is a function that can manipulate some music. \verb+&+ is a \verb+flip+ed  \verb+$+. So we're applying this function to \verb+opus+. In the middle is the ``optic'', or in this case a composition of three: \verb+traverse+, \verb+val+, and \verb+inst+. \verb+traverse+ looks at every note in the music, \verb+inst+ looks at the instrument of a note, and \verb+val+ is an implementation detail that will be hidden in future versions of Heqet. The \verb+.~+ operator means to set the value revealed by the optic, in this case setting the instrument field of every note to be \verb+Just oboe+. 
+
+Suppose that all but one instrument was recognized automatically. Then, we could set all the notes with an unknown instrument to be an oboe like this:
+
+\begin{verbatim}opusWithInstruments = opus 
+    & instKind "Unknown".traverse.val.inst .~ Just oboe
+\end{verbatim}
+
+\verb+instKind+ is a function that takes a string and produces a lens that looks at notes which have
+an instrument of that kind. The unknown instrument is a real instrument, not just a value of \verb+Nothing+ in the instrument field, because we need to know how to write its name in a score, what clefs it uses, what range it has (unlimited), etc. 
+
+If you try these examples, you might notice a problem: all the music is still on one staff! That's because staff assignments are separate from instrument assignments. To assign a staff of \verb+"3"+ (yes, that's a string) to the Bari Sax, we write:
+
+\begin{verbatim}opusWithInstruments = opus 
+    & instKind "Bari Sax".traverse.val.line .~ Just "3"
+\end{verbatim}
+
+Heqet provides lenses to select music by start and end time or by any predicate on a single note. 
+
+To output a score with correct note durations, you need to assign a meter.  The meter is one of the rare musical properties that is not stored in the notes themselves. Rather, a meter is a set of notes which, instead of having pitches, have measure and beat events. Assigning a meter to a segment of music simply means inserting these notes, which can have a staff just like any other note. These events can be sliced and moved around with their music, and  Heqet will analyze them to determine what meter they specify and where meter changes need to be inserted into the printed score. To make a piece of music in common time, write:
+
+\begin{verbatim}opusWithInstruments = opus 
+    & assignMeter m4_4
+\end{verbatim}
+
+Even though \verb+assignMeter m4_4+ does not use a lens, I find it natural to apply it with \verb+&+, since often I want to take a music value and apply many functions to it, writing each function on a separate line beginning with the \verb+&+. 
+
+(note: meter rendering has developed a bug which I don't have time to fix as I have stopped coding to write up my report and tutorial. Meters now simply don't appear in the rendered code.)
 
 \end{section}
 
 \begin{section}{Heqet for Lilypond Users}
+So you want to do some fancy computer processing of your music, but you're not hot about Scheme, or at least are frustrated with the limited tools for working with Lilypond music data? You've come to the right place! However, this tutorial will not teach Haskell. 
 
 \begin{subsection}{Note input}
+In order to enter music into Haskell source code using the Heqet DSL, you need to enable the  ``quasi-quoting'' optional language feature by either putting \verb+{-# LANGUAGE QuasiQuotes #-}+ at the top of your source file or by typing \verb+:set -XQuasiQuotes+ into GHCi. Then import Dutch or English note entry with 
+
+\verb+import Heqet.Input.Dutch+
+
+\verb+import Heqet.Input.English+
+
+Now you can create Heqet music values in Haskell by writing them enclosed by ``\verb+[music|+'' and ``\verb+|]+'', like so: 
+
+\verb+[music| c4 d8 e f2 |]+
 
 \end{subsection}
 
 \begin{subsection}{Differences from Lilypond input}
-There are several differences between the Heqet note-input domain-specific language and Lilypond input, for a variety of reasons. 
+There are several differences between the Heqet note-input domain-specific language and Lilypond input, for a variety of reasons, including philosophical differences, features Heqet provides which are not in Lilypond, features which would be troublesome to implement in Heqet, and features which I simply haven't gotten around to yet. 
 \begin{itemize}
-\item You can enter notes with any rational duration with the \verb+\d+ syntax, for example \verb+c\d 4/5+ to make a note with a duration of $4/5$ of a WHAT. You can omit the denominator if it's $1$. This is currently the only way to enter notes of the durations needed for a tuplet. 
+\item You can enter notes with any rational duration with the \verb+\d+ syntax, for example \verb+c\d 4/5+ to make a note with a duration of $4/5$ of a whole note. You can omit the denominator if it's $1$. This is currently the only way to enter notes of the durations needed for a tuplet.
 
-\item \verb+hz+
+\item You can also enter notes with any frequency you like by writing the pitch as a number followed by  \verb+hz+, for instance \verb+[music| 234.01hz4. |]+
 
-\item \verb+c-(+ for slurs (sorry)
+\item You can modify the pitch of a note with the command \verb+\cents+ followed by a number, possibly negative. This is currently the only way to get a quarter-tone pitch.
 
-\item no clefs or time signatures
+\item The only languages you can currently use are Dutch and English. 
 
-\item functions, commands, \verb+\with+ . Lilypond parsing problems
+\item At the moment, slurs must be entered by putting a \verb+-(+ articulation on every note but the last.
 
-\item only absolute entry at the moment. 
+\item You cannot enter clefs, keys, or time signatures. I might implement time signatures, but Heqet will never support keys or clefs in note entry, since these are matters of how music is presented to the musician, not fundamental aspects of the music itself.
+
+\item Lilypond is actually difficult to parse because there is no syntactic difference between a command like \verb+\fermata+, which follows the note it applies to, and one like \verb+\xNote+, which proceeds its argument. In addition, many Lilypond commands change the state of all music that follows it, but not all do. Given the obvious usefulness of importing directly from Lilypond, in the future I will probably write some sort of Scheme tool to run in Lilypond and create a Heqet music value.
+
+\item Currently, only absolute note entry is possible.
 
 \item percussion notation \verb+\phh+ for hi-hat. When you enter notes, you don't need to specify that they must be rendered in a DrumStaff. They should be automatically rendered well, although support for percussion is currently minimal.
 
