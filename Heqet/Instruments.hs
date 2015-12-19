@@ -65,7 +65,7 @@ melody = Instrument {
     , _transposition = [pp| c |]
     , _name = "Melody"
     , _shortName = "M"
-    , _kind = "Abstract"
+    , _kind = "Melody"
     , _nSubStaves = 1
     }
 
@@ -79,7 +79,7 @@ blank = Instrument {
     , _transposition = [pp| c |]
     , _name = ""
     , _shortName = ""
-    , _kind = "Abstract"
+    , _kind = "Blank"
     , _nSubStaves = 1
     }
 
@@ -93,7 +93,7 @@ unknown = Instrument {
     , _transposition = [pp| c |]
     , _name = "Unknown"
     , _shortName = "?"
-    , _kind = "Abstract"
+    , _kind = "Unknown"
     , _nSubStaves = 1
     }
 
