@@ -11,7 +11,9 @@
         directly in Haskell code, which resembles Lilypond notation
         but diverges somewhat in accordance with how Heqet approaches
         music, in particular, in that Heqet takes a more abstract view
-        of music, while Lilypond mixes music and its notation. In contrast,
+        of music, while Lilypond mixes music and its notation (Heqet also
+        offers some features absent in Lilypond, such as notes of arbitrary
+        rational duration and arbitrary pitch). In contrast,
         Euterpea has an extremely abstract model of music, putting Heqet in
         the middle. Creating a score is complicated and requires some
         human intervention in assigning staves, meters, and clefs, etc. To aid
@@ -23,7 +25,11 @@ modifying music data, which allows multiple criteria for the
 desired fragment of music to be composed. It's possible to define
 custom pitch types which can be mixed with other types of pitch
 freely, to include arbitrary Lilypond tweaks, and to define your
-own instruments, complete with playability evaluation.
+own instruments, complete with playability evaluation. Heqet is designed to
+automate many features of music notation, such as fitting notes into chords
+and multiple voices on one staff, automatically detecting meter changes,
+and automatically assigning clefs (as best suited for each instrument), as
+well as displaying the instruments on each staff properly.
         
         <br /><br />
         If you want to use Heqet, clone <a href="https://github.com/Super-Fluid/heqet">
