@@ -43,6 +43,7 @@
 
 \tableofcontents
 \newpage
+\pagestyle{plain}
 
 \begin{section}{Heqet for Euterpea Users}
 Given a Euterpea music expression, creating a score is
@@ -93,6 +94,8 @@ Even though \verb+assignMeter m4_4+ does not use a lens, I find it natural to ap
 
 (note: meter rendering has developed a bug which I don't have time to fix as I have stopped coding to write up my report and tutorial. Meters now simply don't appear in the rendered code.)
 
+If you want the string output by \verb+writeScore+, you can use \verb+allRendering+ instead, but I don't expect this to be a common need.
+
 \end{section}
 
 \begin{section}{Heqet for Lilypond Users}
@@ -126,28 +129,45 @@ There are several differences between the Heqet note-input domain-specific langu
 
 \item You cannot enter clefs, keys, or time signatures. I might implement time signatures, but Heqet will never support keys or clefs in note entry, since these are matters of how music is presented to the musician, not fundamental aspects of the music itself.
 
-\item Lilypond is actually difficult to parse because there is no syntactic difference between a command like \verb+\fermata+, which follows the note it applies to, and one like \verb+\xNote+, which proceeds its argument. In addition, many Lilypond commands change the state of all music that follows it, but not all do. Given the obvious usefulness of importing directly from Lilypond, in the future I will probably write some sort of Scheme tool to run in Lilypond and create a Heqet music value.
+\item Lilypond is actually difficult to parse because there is no syntactic difference between a command like \verb+\fermata+, which follows the note it applies to, and one like \verb+\xNote+, which proceeds its argument. In addition, many Lilypond commands change the state of all music that follows it, but not all do. Given the obvious usefulness of importing directly from Lilypond, in the future I will probably write some sort of Scheme tool to run in Lilypond and create a Heqet music value. 
 
-\item Currently, only absolute note entry is possible.
+This means that if you want to include Lilypond commands, you must specify their syntax. If a command follows its note, begins with a backslash, and contains only alphanumeric characters, then you can write it as in Lilypond. If it follows its note but doesn't meet these criteria, enter it with \verb+\with+ and your desired command in a string: \verb+c4 \with "\\foo 1.7"+. If you have a command that has a part that proceeds its music argument, for instance the pair of \verb+\stopStaff+ and \verb+\startStaff+ to temporarily hide the staff, then you must enter it as follows:
 
-\item percussion notation \verb+\phh+ for hi-hat. When you enter notes, you don't need to specify that they must be rendered in a DrumStaff. They should be automatically rendered well, although support for percussion is currently minimal.
+\begin{verbatim}
+[music| c4 \command "\\stopStaff" "\\startStaff" { c d } e |]
+\end{verbatim}
 
-\item no way to manually write beams, as this is not something the musician should need to worry about.
+Since many Lilypond commands take their music argument in braces, with the closing brace being the only part that follows the music, there is a shortcut:
+
+\begin{verbatim}
+[music| c4 \function "\\transpose c e" { c d } e |]
+\end{verbatim}
+
+A Lilypond command is separately recorded on every note it's applied to. At the moment, no effort is made to combine notes with a certain command into a single instance of that command with a long music argument upon rendering. This will be required for rendering octava marks correctly, and may improve performance, so future versions of Heqet may include a way to mark whether a command must, can, or shouldn't be combined.
+
+A warning: although it is possible to insert arbitrary Lilypond code into a Heqet music value, please take care, as rearranging the notes of a heavily-tweaked piece of music might have unexpected effects, as Heqet currently has no understanding of the meanings of Lilypond commands.
+
+\item Currently, only absolute note entry is possible. 
+
+\item In Lilypond, you can enter regular notes or you can enter percussion notes in drum mode. In Heqet, both kinds of notes are mixed. You must enter percussion notes by proceeding each with \verb+\p+, so \verb+\phh+ means a hi-hat note. 
+
+\item There is no way to manually specify beams, and never will be.
+
+\item Repeats are not supported in note entry and probably never will be, as they are matters of notation, not musical fundamentals, and it's easy to repeat a section of music using Haskell functions without resorting to notation in the music-entry DSL.
+
 \end{itemize}
 \end{subsection}
-
-\begin{subsection}{Making a score}
-
-\end{subsection}
-
-\begin{subsection}{Lilypond tweaks}
-
-\end{subsection}
-
 \end{section}
 
-\begin{section}{Advanced topics}
+\begin{section}{More processing}
+To combine pieces of music in parallel or in sequence, use the functions \verb+parI+ and \verb+seqI+. A piece of music in Heqet exists at a specific time. \verb+seqI+ will move its second argument to immediately follow its first, while \verb+parI+ simply squashes the two segments of music together into one no matter what time they occur. To change the time that a piece of music starts at, use the function \verb+startMusicAt+, which takes a rational starting time and a piece of music. For example, \verb+seqI+ is defined as
 
+\begin{verbatim}
+seqI m1 m2 = m1 `parI` (startMusicAt (getEndTime m1) m2)
+\end{verbatim}
+
+where \verb+getEndTime+ and its companion \verb+getStartTime+ do the obvious. If you want to modify a section of music specified by its start or end time, you can use the functions \verb+takeMusic+, \verb+dropMusic+, and \verb+sliceMusic+, which take 1 or 2 rational points in time and give a lens which can be used to focus on that section of music. To discard the other parts of the music, you can ``view'' the music through the lens with the \verb+^.+ operator, for instance \verb+opus ^. sliceMusic 0 100+
 \end{section}
+
 
 \end{document}
