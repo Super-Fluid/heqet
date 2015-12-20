@@ -51,7 +51,21 @@ Looking over my original proposal, I'm pleased to find that I  achieved my targe
 
 \end{section}
 \begin{section}{How did it turn out?}
-The three deliverables I listed in my proposal were code, documentation, and a tutorial (maybe two). The code was supposed to be a wrapper for Euterpea 2.0, yet to be released. Euterpea 2.0 is still not released, but that's okay because I ended up writing a completely separate library that just accepts Euterpea data to convert to Heqet data. I don't have documentation beyond comments in my code, but I did write a tutorial with two parts for existing Euterpea and Lilypond users.
+The three deliverables I listed in my proposal were code, documentation, and a tutorial (maybe two). The code was supposed to be a wrapper for Euterpea 2.0, yet to be released. Euterpea 2.0 is still not released, but that's okay because I ended up writing a completely separate library that just accepts Euterpea data to convert to Heqet data. I don't have documentation beyond comments in my code, but I did write a tutorial with two parts for existing Euterpea and Lilypond users. Speaking of which, the tutorial contains a lot more concrete information about Heqet than does this report.
+
+The proposal specified five main features:
+\begin{itemize}
+\item A music representation capable of handling Lilypond commands and all the different kind of notes, percussion, and lyrics, along with a set of different pitch types such as 19-tone equal temperament. My music representation meets this requirement. I have not created such a set of pitch types, beyond ordinary notes, percussion, and lyrics, but it is possible for the user to create them and use them in Heqet, as described in the tutorial.
+
+\item A thorough model of an instrument. Heqet instruments currently supply functions to check playability and assign clefs. Evaluation of instrument switches is not yet supported.
+
+\item Support for converting Euterpea music to Lilypond code. Heqet does this, and, in particular, chords and polyphony within a single staff are rendered correctly.
+
+\item Haskell lenses to easily select sections of music to modify and a large set of functions to modify them in useful ways. I wouldn't say I have a large set of functions, but otherwise Heqet meets this requirement.
+
+\item Support for entering music in a Haskell source file. Yep!
+
+\end{itemize}
 
 \end{section}
 \begin{section}{What I Learned}
