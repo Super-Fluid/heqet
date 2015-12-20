@@ -7,7 +7,8 @@
  \usepackage{transparent}
  \usepackage{hyperref}
  \usepackage{lastpage}
-
+ \usepackage[final]{pdfpages}
+ 
 \pagestyle{fancy}
 \lhead{} % Top left header
 \chead{Heqet Tutorial} % Top center head
@@ -190,9 +191,26 @@ data PlayInfo = PlayInfo {
     }
 \end{verbatim}
 
+\end{section}
+\begin{section}{Example}
+\begin{verbatim}
+polyPiano = [music| 
+<< { c1 } \\ 
+{c''8. c''16 d''4 e'' f''} \\ 
+{ r4 r8 g''8 bf''8 r8 r4 } >> 
+c8 e g c' e' g' c'' e'' <c''' c''>1 |]
+    & assignMeter m4_4
+    & superBasicSplit
+    & traverse.val.inst .~ Just Instruments.piano
+\end{verbatim}
+This example demonstrates chords, polyphony, and automatic splitting of music into two staves for piano.
 
+\begin{figure}
+ \centering 
+ \includepdf[pages=-]{polyPiano.pdf}
+\end{figure}
+
+More examples are in \verb+TestCases.hs+.
 
 \end{section}
-
-
 \end{document}
