@@ -171,7 +171,26 @@ where \verb+getEndTime+ and its companion \verb+getStartTime+ do the obvious. If
 
 
 \begin{section}{Making your own note type}
-Say you want to play around with 19-tone equal temperament. Heqet currently doesn't have built-in support for notes other than 12-tone equally tempered pitches, percussion, and lyrics, but you can still create your own type of pitch, put it in a \verb+Music+ value (even mixed with other types of pitches) and render it to Lilypond.
+Say you want to play around with 19-tone equal temperament. Heqet currently doesn't have built-in support for notes other than 12-tone equally tempered pitches, percussion, and lyrics, but you can still create your own type of pitch, put it in a \verb+Music+ value (even mixed with other types of pitches) and render it to Lilypond. You'll need to turn on the DeriveDataTypeable extension by putting 
+\verb+{-# LANGUAGE DeriveDataTypeable #-}+ in your source file or typing \verb+:set -XDeriveDataTypeable+ in GHCi. Now, \verb+import Data.Typeable+. Then define your new pitch type, deriving \verb+Show+ and \verb+Typeable+. Now, Heqet defines a data contractor called \verb+Ly+ which can take any argument that implements \verb+Show+ and \verb+Typeable+, as well as two Heqet classes, \verb+Renderable+ and \verb+Playable+. Now look at \verb+LyInstances.hs+ and the beginning of \verb+Output/Render.hs+ for example instances and write your own.
+
+\begin{verbatim}
+class Renderable a where
+    renderInStaff :: (Note MultiPitchLy) -> a -> String
+    getMarkup :: a -> [String]
+    isDisruptive :: a -> Bool
+
+class Playable a where
+    info :: a -> Maybe PlayInfo
+
+data PlayInfo = PlayInfo {
+    _slurrable :: Bool
+  , _chordable :: Bool
+  , _pitchHeight :: Maybe Double
+    }
+\end{verbatim}
+
+
 
 \end{section}
 
