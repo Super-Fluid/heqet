@@ -323,7 +323,18 @@ getting the type of Ly we have.
 typeOfLy :: Ly -> TypeRep
 typeOfLy (Ly a) = typeOf a
 
-type MusicOf a = [(InTime (Note a))] -- Invariant: must be sorted chronologically
+data Sort = Unsorted | Sorted
+    deriving (Show,Read,Eq,Typeable,Ord,Enum)
+
+ -- Invariant: must be sorted chronologically if Sort is Sorted
+ -- There should be no notes which extend beyond the begin/end times.
+data MusicOf a = Mu 
+    { _beginTime :: PointInTime
+    , _endTime :: PointInTime
+    , _sortStatus :: Sort
+    , _content :: [(InTime (Note a))]
+    }
+    deriving (Show)
 type Music = MusicOf Ly
 type LyNote = (InTime (Note Ly)) 
 -- just for clarity in type signatures
@@ -380,6 +391,7 @@ makeLenses ''Pitch
 makeLenses ''Note
 makeLenses ''Instrument
 makeLenses ''PlayInfo
+makeLenses ''MusicOf
 
 instance Renderable LyPitch where
     renderInStaff n (LyPitch p) = renderPitchAcc (p^.pc) (n^.acc) ++ renderOct (p^.oct)

@@ -16,14 +16,16 @@ import Safe
 import Data.Typeable
 
 mapOverNotes :: (Note a -> Note a) -> MusicOf a -> MusicOf a
-mapOverNotes = map . fmap
+mapOverNotes f m = m & content.traverse.val %~ f
 
 startMusicAt :: PointInTime -> MusicOf a -> MusicOf a
-startMusicAt _ [] = []
 startMusicAt pit mus = let
-    currentStartTime = minimumDef 0 $ (mus ^..traverse.t)
+    currentStartTime = mus ^. beginTime
     shift = pit - currentStartTime
-    in mus & traverse.t %~ (+shift)
+    in mus 
+        & content.traverse.t %~ (+shift)
+        & beginTime .~ pit
+        & endTime %~ (+shift)
 
 startMusicAtZero :: MusicOf a -> MusicOf a
 startMusicAtZero = startMusicAt 0
@@ -31,7 +33,7 @@ startMusicAtZero = startMusicAt 0
 startingMusicAt :: PointInTime -> Lens' (MusicOf a) (MusicOf a)
 startingMusicAt pit = let 
     h = lens 
-        (\m -> (startMusicAt pit m,minimumDef 0 $ (m ^..traverse.t))) 
+        (\m -> (startMusicAt pit m,m^.beginTime)) 
         (\_ (m,oldStartTime) -> startMusicAt oldStartTime m)
     in h._1 -- hide the saved oldStartTime
 
@@ -39,69 +41,87 @@ startingMusicAtZero :: Lens' (MusicOf a) (MusicOf a)
 startingMusicAtZero = startingMusicAt 0
 
 assignLine :: String -> Music -> Music
-assignLine s m = m & traverse.val.line .~ Just s
+assignLine s m = m & content.traverse.val.line .~ Just s
 
 eraseLine :: Music -> Music
-eraseLine m = m & traverse.val.line .~ Nothing
+eraseLine m = m & content.traverse.val.line .~ Nothing
+
+musicBy :: ((InTime (Note Ly)) -> Bool) -> Lens' Music Music
+musicBy p = lens (\(Mu b e s m) -> Mu b e s (filter p m)) (\(Mu b e s m)(Mu b' e' s' m') -> Mu (min b b') (max e e') Unsorted (m ++ m'))
 
 ofLine :: String -> Lens' Music Music
-ofLine v = filteringBy (\it -> it^.val.line == Just v)
+ofLine v = musicBy (\it -> it^.val.line == Just v)
 
 notOfLine :: String -> Lens' Music Music
-notOfLine v = filteringBy (\it -> it^.val.line /= Just v)
+notOfLine v = musicBy (\it -> it^.val.line /= Just v)
 
 instName :: String -> Lens' Music Music
-instName v = filteringBy (\it -> ((^.name) <$> it^.val.inst) == Just v)
+instName v = musicBy (\it -> ((^.name) <$> it^.val.inst) == Just v)
 
 notInstName :: String -> Lens' Music Music
-notInstName v = filteringBy (\it -> ((^.name) <$> it^.val.inst) /= Just v)
+notInstName v = musicBy (\it -> ((^.name) <$> it^.val.inst) /= Just v)
 
 instKind :: String -> Lens' Music Music
-instKind v = filteringBy (\it -> ((^.kind) <$> it^.val.inst) == Just v)
+instKind v = musicBy (\it -> ((^.kind) <$> it^.val.inst) == Just v)
 
 notInstKind :: String -> Lens' Music Music
-notInstKind v = filteringBy (\it -> ((^.kind) <$> it^.val.inst) /= Just v)
+notInstKind v = musicBy (\it -> ((^.kind) <$> it^.val.inst) /= Just v)
 
 ofType :: TypeRep -> Lens' Music Music
-ofType t = filteringBy (\it -> (it^.val.pitch & typeOfLy) == t)
+ofType t = musicBy (\it -> (it^.val.pitch & typeOfLy) == t)
 
 notOfType :: TypeRep -> Lens' Music Music
-notOfType t = filteringBy (\it -> (it^.val.pitch & typeOfLy) /= t)
+notOfType t = musicBy (\it -> (it^.val.pitch & typeOfLy) /= t)
 
 measuresAndBeats :: Lens' Music Music
-measuresAndBeats = filteringBy (\it -> let t = (it^.val.pitch & typeOfLy) in 
+measuresAndBeats = musicBy (\it -> let t = (it^.val.pitch & typeOfLy) in 
     (t == lyMeasureEventType) || (t == lyBeatEventType)
     )
 
 noMeasuresOrBeats :: Lens' Music Music
-noMeasuresOrBeats = filteringBy (\it -> let t = (it^.val.pitch & typeOfLy) in 
+noMeasuresOrBeats = musicBy (\it -> let t = (it^.val.pitch & typeOfLy) in 
     (t /= lyMeasureEventType) && (t /= lyBeatEventType)
     )
 
 playables :: Lens' Music Music
-playables = filteringBy (\it -> it^.val.pitch & isPlayable)
+playables = musicBy (\it -> it^.val.pitch & isPlayable)
 
 notPlayables :: Lens' Music Music
-notPlayables = filteringBy (\it -> it^.val.pitch & isPlayable & not)
+notPlayables = musicBy (\it -> it^.val.pitch & isPlayable & not)
 
 timeSort :: [InTime a] -> [InTime a]
 timeSort = sortBy $ \it1 it2 -> (it1^.t) `compare` (it2^.t)
 
-getEndTime :: Music -> Duration
-getEndTime its = maximumNote "getEndTime" $ map (\it -> (it^.t) + (it^.dur)) (filter (\it -> it^.val.pitch & isPlayable) its)
+getEndTime :: Music -> PointInTime
+getEndTime m = m^.beginTime
 
-getStartTime :: Music -> Duration
-getStartTime its = minimumNote "getStartTime" $ map (\it -> (it^.t)) (filter (\it -> it^.val.pitch & isPlayable) its)
+getStartTime :: Music -> PointInTime
+getStartTime m = m^.endTime
+
+calcEndTime :: Music -> PointInTime
+calcEndTime (Mu _ _ _ its) = maximumNote "getEndTime" $ map (\it -> (it^.t) + (it^.dur)) (filter (\it -> it^.val.pitch & isPlayable) its)
+
+calcStartTime :: Music -> PointInTime
+calcStartTime (Mu _ _ _ its) = minimumNote "getStartTime" $ map (\it -> (it^.t)) (filter (\it -> it^.val.pitch & isPlayable) its)
 
 takeMusic :: PointInTime -> Lens' Music Music
-takeMusic pit = lens (mapMaybe f) (\s a -> a++s) where
+takeMusic pit = 
+    lens (\(Mu _ e s m) -> Mu pit (max pit e) s (takeIts pit m)) (\(Mu _ e s m)(Mu b' _ s' m') ->  Mu b' e (min s s') ((takeIts pit m')++(dropIts pit m)))
+
+takeIts :: PointInTime -> [InTime (Note Ly)] -> [InTime (Note Ly)]
+takeIts pit its = mapMaybe f its where
     f it
         | it^.t >= pit = Nothing
         | it^.t + it^.dur <= pit = Just it
         | otherwise = Just $ it & dur .~ (pit - it^.t) & val.isTied .~ True
 
 dropMusic :: PointInTime -> Lens' Music Music
-dropMusic pit = lens (mapMaybe f) (\s a -> a++s) where
+dropMusic pit =
+     lens (\(Mu b _ s m) -> Mu (min pit b) pit s (dropIts pit m)) (\(Mu b _ s m)(Mu _ e' s' m') ->  Mu b e' (min s s') ((takeIts pit m)++(dropIts pit m')))
+
+
+dropIts :: PointInTime -> [InTime (Note Ly)] -> [InTime (Note Ly)]
+dropIts pit its = mapMaybe f its where
     f it
         | it^.t >= pit = Just it
         | it^.t + it^.dur < pit = Nothing
@@ -111,19 +131,19 @@ sliceMusic :: PointInTime -> PointInTime -> Lens' Music Music
 sliceMusic from to = (takeMusic to).(dropMusic from)
 
 atTime :: PointInTime -> Lens' Music Music
-atTime pit = filteringBy (\it -> it^.t == pit)
+atTime pit = musicBy (\it -> it^.t == pit)
 
 -- This includes the partial beginning measure, if present.
 -- if no measure information is present, then we'll focus on 
 -- the whole music value as a single measure, so measures
 -- are not guarantied to have a measure event or a partial event.
-measures :: Lens' Music [Music]
-measures = lens f (\_ bars -> concat bars) where
+measures :: Music -> [Music]
+measures = f where
     f :: Music -> [Music]
     -- our algorithm will be to take notes one by one
     -- and spawn a new measure whenever we find a 
     -- measure event
-    f m = let
+    f (Mu b e _ m) = let
         sorted = sortBy (comparing (\it -> (it^.t,it^.val.pitch 
                                             & typeOfLy 
                                             & (/= lyMeasureEventType)
@@ -131,16 +151,16 @@ measures = lens f (\_ bars -> concat bars) where
                                     )
                         ) m
         -- sort by time, with measure events coming first (because False < True)
-        f'h :: [Music] -> LyNote -> [Music]
-        f'h [] it = [[it]]
-        f'h (current:past) it = 
+        f'h :: [InTime (Note Ly)] -> LyNote -> [Music]
+        f'h [] it = [Mu 0 0 Unsorted [it]] -- shouldn't happen?
+        f'h (current@(Mu b1 e1 s1 m1):past) it = 
             if typeOfLy (it^.val.pitch) == lyMeasureEventType
-            then [it]:current:past
-            else (it:current):past
-        in foldl f'h [] sorted
+            then (Mu (it^.t) ((it^.t) + (it^.dur)) Unsorted [it]):current:past
+            else (Mu b1 e1 Unsorted (it:m1)):past
+        in foldl f'h [(Mu b b Unsorted [])] sorted
 
 annotatedMeasures :: Lens' Music [(PointInTime,Music,PointInTime)]
-annotatedMeasures = lens f (\_ bars -> concat (bars^..traverse._2)) where
+annotatedMeasures = content . lens f (\_ bars -> concat (bars^..traverse._2)) where
     f :: Music -> [(PointInTime,Music,PointInTime)]
     -- our algorithm will be to take notes one by one
     -- and spawn a new measure whenever we find a 
@@ -167,7 +187,7 @@ annotatedMeasures = lens f (\_ bars -> concat (bars^..traverse._2)) where
 -- segment starts with one such note, except for
 -- the first segment
 segmentedBy :: (LyNote -> Bool) -> Lens' Music [Music]
-segmentedBy pred = lens f (\_ bars -> concat bars) where
+segmentedBy pred = content . lens f (\_ bars -> concat bars) where
     f :: Music -> [Music]
     -- our algorithm will be to take notes one by one
     -- and spawn a new measure whenever we find a 
@@ -211,7 +231,7 @@ transpose :: Pitch -> Music -> Music
 transpose _ = id -- TODO!!
 
 firstNote :: Lens' Music Music
-firstNote = lens (\its -> let
+firstNote = content . lens (\its -> let
 	    playables = (filter (\it -> it^.val.pitch & isPlayable) its)
 	    first = minimumBy (comparing (^.t)) playables
 	  in case playables of
@@ -220,16 +240,16 @@ firstNote = lens (\its -> let
 	  ) (parI) 
 
 applyDynamic :: Dynamic -> Music -> Music
-applyDynamic dyn m = m & traverse.val.dynamic .~ Just dyn
+applyDynamic dyn m = m & content.traverse.val.dynamic .~ Just dyn
 
 applyArt :: SimpleArticulation -> Music -> Music
-applyArt art m = m & traverse.val.artics %~ (art:)
+applyArt art m = m & content.traverse.val.artics %~ (art:)
 
 applyNoteCommand :: NoteCommand -> Music -> Music
-applyNoteCommand ni = (& firstNote.traverse.val.noteCommands %~ (appendNI ni))
+applyNoteCommand ni = (& content.firstNote.traverse.val.noteCommands %~ (appendNI ni))
 
 applyNoteCommandToAll :: NoteCommand -> Music -> Music
-applyNoteCommandToAll ni = (& traverse.val.noteCommands %~ (appendNI ni))
+applyNoteCommandToAll ni = (& content.traverse.val.noteCommands %~ (appendNI ni))
 
 appendNI :: NoteCommand -> [NoteCommand] -> [NoteCommand]
 appendNI nc ncs = if nc `elem` ncs
@@ -237,14 +257,17 @@ appendNI nc ncs = if nc `elem` ncs
 		  else (nc:ncs)
 
 -- join two pieces of Music in PARALLEL
--- might be revised if we reintroduce the
--- contraint that Music be in chronological order.
 parI :: Music -> Music -> Music
-parI = (++)
+parI (Mu b1 e1 s1 m1) (Mu b2 e2 s2 m2) = Mu
+    { _beginTime = min b1 b2
+    , _endTime = max e1 e2
+    , _sortStatus = Unsorted
+    , _content = m1 ++ m2
+    }
 
 -- join two pieces of music in sequence
 seqI :: Music -> Music -> Music
-seqI m1 m2 = m1 ++ (startMusicAt (getEndTime m1) m2)
+seqI m1 m2 = m1 `parI` (startMusicAt (getEndTime m1) m2)
 
 -- (I stands for InTime)
 
@@ -268,9 +291,9 @@ You should apply this function to the whole piece of music,
 not individual parts.
 -}
 capLastMeasure :: Music -> Music
-capLastMeasure m = let
+capLastMeasure mus@(Mu b e s m) = let
     cap = emptyInTime
-        & t .~ getEndTime m
+        & t .~ e
         & val.pitch .~ Ly LyMeasureEvent
         & val.line .~ Just "all"
-    in cap:m
+    in Mu b e s (cap:m)
