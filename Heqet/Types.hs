@@ -4,6 +4,7 @@
 , FlexibleInstances
 , OverlappingInstances
 , UndecidableInstances
+, Rank2Types
 , DeriveDataTypeable #-}
 
 module Heqet.Types where
@@ -55,9 +56,9 @@ data Instrument = Instrument {
     , _pickUpTime :: PerformanceDuration
     , _putDownTime :: PerformanceDuration
     -- in concert pitch
-    , _annotatePlayability :: Music -> Music
-    , _assignConcertClefs :: Music -> Music
-    , _assignWrittenClefs :: Music -> Music
+    , _annotatePlayability :: forall s. Music s -> Music s
+    , _assignConcertClefs :: forall s. Music s -> Music s
+    , _assignWrittenClefs :: forall s. Music s -> Music s
     -- the pitch that the instrument sounds when playing a written middle c
     , _transposition :: Pitch
     , _name :: String
@@ -237,7 +238,7 @@ lyLyricType = typeOf (LyLyric undefined)
 
 -- see Render for Renderable instance
 
-data LyGrace = LyGrace Music
+data LyGrace = LyGrace (Music Sorted)
     deriving (Show,     Typeable   )
 lyGraceType = typeOf (LyGrace undefined)
 
@@ -323,8 +324,16 @@ getting the type of Ly we have.
 typeOfLy :: Ly -> TypeRep
 typeOfLy (Ly a) = typeOf a
 
-type MusicOf a = [(InTime (Note a))] -- Invariant: must be sorted chronologically
-type Music = MusicOf Ly
+data Sorted
+instance Show Sorted where
+    show _ = "Sorted"
+data Unsorted
+
+data MusicOf' sort a = Mu PointInTime PointInTime [a]
+    deriving (Show,Eq,Functor)
+type MusicOf a sort = MusicOf' sort (InTime (Note a))
+type Music sort = MusicOf sort Ly
+
 type LyNote = (InTime (Note Ly)) 
 -- just for clarity in type signatures
 -- Music = [LyNote]

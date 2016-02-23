@@ -15,83 +15,94 @@ import Data.Ord
 import Safe
 import Data.Typeable
 
-mapOverNotes :: (Note a -> Note a) -> MusicOf a -> MusicOf a
-mapOverNotes = map . fmap
+mapOverNotes :: (Note a -> Note a) -> MusicOf a anysort -> MusicOf a anysort
+mapOverNotes = fmap . fmap
 
-startMusicAt :: PointInTime -> MusicOf a -> MusicOf a
-startMusicAt _ [] = []
-startMusicAt pit mus = let
+startMusicAt :: PointInTime -> MusicOf a anysort -> MusicOf a anysort
+startMusicAt pit (Mu b e mus) = let
     currentStartTime = minimumDef 0 $ (mus ^..traverse.t)
     shift = pit - currentStartTime
-    in mus & traverse.t %~ (+shift)
+    in Mu (b+shift) (e+shift) $ mus & traverse.t %~ (+shift)
 
-startMusicAtZero :: MusicOf a -> MusicOf a
+startMusicAtZero :: MusicOf a anysort -> MusicOf a anysort
 startMusicAtZero = startMusicAt 0
 
-startingMusicAt :: PointInTime -> Lens' (MusicOf a) (MusicOf a)
+startingMusicAt :: PointInTime -> Lens' (MusicOf a anysort) (MusicOf a anysort)
 startingMusicAt pit = let 
     h = lens 
-        (\m -> (startMusicAt pit m,minimumDef 0 $ (m ^..traverse.t))) 
-        (\_ (m,oldStartTime) -> startMusicAt oldStartTime m)
+        (\mus@(Mu b _ m) -> (startMusicAt pit mus,b)) 
+        (\_ (mus,oldStartTime) -> startMusicAt oldStartTime mus)
     in h._1 -- hide the saved oldStartTime
 
-startingMusicAtZero :: Lens' (MusicOf a) (MusicOf a)
+startingMusicAtZero :: Lens' (MusicOf a anysort) (MusicOf a anysort)
 startingMusicAtZero = startingMusicAt 0
 
-assignLine :: String -> Music -> Music
-assignLine s m = m & traverse.val.line .~ Just s
+assignLine :: String -> Music anysort -> Music anysort
+assignLine s (Mu b e m) = Mu b e $ m & traverse.val.line .~ Just s
 
-eraseLine :: Music -> Music
-eraseLine m = m & traverse.val.line .~ Nothing
+eraseLine :: Music anysort -> Music anysort
+eraseLine (Mu b e m) = Mu b e $ m & traverse.val.line .~ Nothing
 
-ofLine :: String -> Lens' Music Music
-ofLine v = filteringBy (\it -> it^.val.line == Just v)
+-- NOTE: produces an unsorted music!  ---------------------------------VVVVVVVV 
+filteringMusicBy :: ((InTime a) -> Bool) -> Lens (MusicOf a anysort) (MusicOf a Unsorted) (MusicOf a anysort) (MusicOf a othersort)
+filteringMusicBy p = lens (\(Mu b e its) -> filter p its) (\(Mu b e its) its' -> (Mu b e (its'++its)))
 
-notOfLine :: String -> Lens' Music Music
-notOfLine v = filteringBy (\it -> it^.val.line /= Just v)
+ofLine :: String -> Lens' (Music anysort) (Music anysort)
+ofLine v = filteringMusicBy (\it -> it^.val.line == Just v)
 
-instName :: String -> Lens' Music Music
-instName v = filteringBy (\it -> ((^.name) <$> it^.val.inst) == Just v)
+notOfLine :: String -> Lens' (Music anysort) (Music anysort)
+notOfLine v = filteringMusicBy (\it -> it^.val.line /= Just v)
 
-notInstName :: String -> Lens' Music Music
-notInstName v = filteringBy (\it -> ((^.name) <$> it^.val.inst) /= Just v)
+instName :: String -> Lens' (Music anysort) (Music anysort)
+instName v = filteringMusicBy (\it -> ((^.name) <$> it^.val.inst) == Just v)
 
-instKind :: String -> Lens' Music Music
-instKind v = filteringBy (\it -> ((^.kind) <$> it^.val.inst) == Just v)
+notInstName :: String -> Lens' (Music anysort) (Music anysort)
+notInstName v = filteringMusicBy (\it -> ((^.name) <$> it^.val.inst) /= Just v)
 
-notInstKind :: String -> Lens' Music Music
-notInstKind v = filteringBy (\it -> ((^.kind) <$> it^.val.inst) /= Just v)
+instKind :: String -> Lens' (Music anysort) (Music anysort)
+instKind v = filteringMusicBy (\it -> ((^.kind) <$> it^.val.inst) == Just v)
 
-ofType :: TypeRep -> Lens' Music Music
-ofType t = filteringBy (\it -> (it^.val.pitch & typeOfLy) == t)
+notInstKind :: String -> Lens' (Music anysort) (Music anysort)
+notInstKind v = filteringMusicBy (\it -> ((^.kind) <$> it^.val.inst) /= Just v)
 
-notOfType :: TypeRep -> Lens' Music Music
-notOfType t = filteringBy (\it -> (it^.val.pitch & typeOfLy) /= t)
+ofType :: TypeRep -> Lens' (Music anysort) (Music anysort)
+ofType t = filteringMusicBy (\it -> (it^.val.pitch & typeOfLy) == t)
 
-measuresAndBeats :: Lens' Music Music
-measuresAndBeats = filteringBy (\it -> let t = (it^.val.pitch & typeOfLy) in 
+notOfType :: TypeRep -> Lens' (Music anysort) (Music anysort)
+notOfType t = filteringMusicBy (\it -> (it^.val.pitch & typeOfLy) /= t)
+
+measuresAndBeats :: Lens' (Music anysort) (Music anysort)
+measuresAndBeats = filteringMusicBy (\it -> let t = (it^.val.pitch & typeOfLy) in 
     (t == lyMeasureEventType) || (t == lyBeatEventType)
     )
 
-noMeasuresOrBeats :: Lens' Music Music
-noMeasuresOrBeats = filteringBy (\it -> let t = (it^.val.pitch & typeOfLy) in 
+noMeasuresOrBeats :: Lens' (Music anysort) (Music anysort)
+noMeasuresOrBeats = filteringMusicBy (\it -> let t = (it^.val.pitch & typeOfLy) in 
     (t /= lyMeasureEventType) && (t /= lyBeatEventType)
     )
 
-playables :: Lens' Music Music
-playables = filteringBy (\it -> it^.val.pitch & isPlayable)
+playables :: Lens' (Music anysort) (Music anysort)
+playables = filteringMusicBy (\it -> it^.val.pitch & isPlayable)
 
-notPlayables :: Lens' Music Music
-notPlayables = filteringBy (\it -> it^.val.pitch & isPlayable & not)
+notPlayables :: Lens' (Music anysort) (Music anysort)
+notPlayables = filteringMusicBy (\it -> it^.val.pitch & isPlayable & not)
 
 timeSort :: [InTime a] -> [InTime a]
 timeSort = sortBy $ \it1 it2 -> (it1^.t) `compare` (it2^.t)
 
-getEndTime :: Music -> Duration
-getEndTime its = maximumNote "getEndTime" $ map (\it -> (it^.t) + (it^.dur)) (filter (\it -> it^.val.pitch & isPlayable) its)
+getEndTime :: Music anysort -> PointInTime
+getEndTime (Mu _ e _) = e
 
-getStartTime :: Music -> Duration
-getStartTime its = minimumNote "getStartTime" $ map (\it -> (it^.t)) (filter (\it -> it^.val.pitch & isPlayable) its)
+calcEndTime :: [InTime a] -> PointInTime
+calcEndTime its = maximumNote "getEndTime" $ map (\it -> (it^.t) + (it^.dur)) (filter (\it -> it^.val.pitch & isPlayable) its)
+
+getStartTime :: Music anysort -> PointInTime
+getStartTime (Mu b _ _) = b
+
+calcStartTime :: [InTime a] -> PointInTime
+calcStartTime its = minimumNote "getStartTime" $ map (\it -> (it^.t)) (filter (\it -> it^.val.pitch & isPlayable) its)
+
+{-
 
 takeMusic :: PointInTime -> Lens' Music Music
 takeMusic pit = lens (mapMaybe f) (\s a -> a++s) where
@@ -274,3 +285,4 @@ capLastMeasure m = let
         & val.pitch .~ Ly LyMeasureEvent
         & val.line .~ Just "all"
     in cap:m
+-}
