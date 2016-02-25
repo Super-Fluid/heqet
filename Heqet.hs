@@ -12,6 +12,7 @@ module Heqet
     , module Heqet.TestCases
     , module Heqet.Assigners
     , module Heqet.Meters
+    , module Heqet.Output.Symbols
     ) where
 
 import Heqet.Types
@@ -25,3 +26,4 @@ import Heqet.Output.FastRender
 import Heqet.Meters
 import qualified Heqet.Dynamics
 import Heqet.Split
+import Heqet.Output.Symbols

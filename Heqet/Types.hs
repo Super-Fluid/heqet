@@ -395,6 +395,76 @@ renderOct oct
     | oct < 0 = replicate (- oct) ','
     | otherwise = replicate (oct) '\''
 
+-- for Symbol rendering:
+
+
+type StaffPosition = Int -- probably between -16 and 16 or not much beyond that
+
+data UpDown = Up | Down
+    deriving (Eq,Show,Read)
+data Rest = RBreve | R1 | R2 | R4 | R8 | R16 | R32 | R64 | R128 
+    deriving (Eq,Show,Read)
+
+type TextDynamic = String
+type TextMeter = String
+type TextArticulation = String
+
+data NoteHead = X | Breve | Whole | Half | Filled
+    deriving (Show,Eq,Read)
+type NumFlags = Int
+
+type StaffN = Int
+
+data Color = 
+    DarkGreen
+    | Brown
+    | DarkBlue
+    | Red
+    | LightBlue
+    | Purple
+    | Yellow
+    | Orange
+    | Pink
+    | Grey
+    deriving (Show,Eq,Read)
+
+data Symbol' = 
+    NoteHead NoteHead
+    | Stem UpDown
+    | Flags UpDown NumFlags
+    | Accidental Accidental
+    | SimpleArticulation UpDown SimpleArticulation
+    | Markup String
+    | TextDynamic TextDynamic
+    | TextMeter TextMeter
+    | KeyChange Int
+    | Barline
+    | Clef Clef
+    | Rest Rest
+    | TieS
+    | Slur UpDown
+    | LedgerLines
+    | InsertionPoint
+    | Color Color
+    | Selection
+    | Dotting NumFlags
+    | TextArticulation TextArticulation
+    deriving (Eq,Show,Read)
+
+data HeadingSymbol' = 
+    ClefH Clef
+    | KeyH Int
+    | TextMeterH TextMeter
+    | TopStaffBracket
+    | BottomStaffBracket
+    | InstName String
+    deriving (Eq,Show,Read)
+
+type Symbol = (Symbol',StaffN,StaffPosition,PointInTime)
+type HeadingSymbol = (HeadingSymbol',StaffN)
+
+type StaffOrdering = () -- TODO
+
 --- from Tables .... :( :( :(
 
 type LanguageData = [(String,(PitchClass,Accidental))]

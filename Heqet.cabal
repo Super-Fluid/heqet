@@ -1,5 +1,5 @@
 name:           Heqet
-version:        0.1.0.1
+version:        0.1.0.2
 Cabal-Version:  >=1.10
 license:        GPL-3
 license-file:	License
@@ -25,25 +25,26 @@ Library
        Heqet, 
        Heqet.Input.Dutch, 
        Heqet.Input.English, 
-       Heqet.Input.Euterpea
+       Heqet.Input.Euterpea,
+       Heqet.Types,
+       Heqet.Output.Render,
+       Heqet.Output.FastRender,
+       Heqet.Output.Symbols,
+       Heqet.Tools,
+       Heqet.Instruments,
+       Heqet.Dynamics,
+       Heqet.Split,
+       Heqet.TestCases,
+       Heqet.Assigners,
+       Heqet.Meters,
+       Heqet.Example
   other-modules:
-        Heqet.Assigners,
-        Heqet.Dynamics,
-        Heqet.Example,
         Heqet.Input.Parse,
-        Heqet.Instruments,
         Heqet.List,
         Heqet.LyInstances,
-        Heqet.Meters,
-        Heqet.Output.FastRender,
         Heqet.Output.LilypondSettings,
-        Heqet.Output.Render,
         Heqet.Output.Templates,
-        Heqet.Split,
-        Heqet.Tables,
-        Heqet.TestCases,
-        Heqet.Tools,
-        Heqet.Types
+        Heqet.Tables
   other-extensions:    
         QuasiQuotes, 
         OverlappingInstances, 
