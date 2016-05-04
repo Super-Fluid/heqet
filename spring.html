@@ -1,0 +1,43 @@
+<html>
+<head>
+<title>Heqet Application</title>
+<link rel="stylesheet" type="text/css" href="https://super-fluid.github.io/main.css">
+</head>
+<body>
+<div class="main-container">
+<center><h1>Heqet Application</h1>
+<img height="64px" src="./logo.png" alt="Heqet logo: a woolly frog snapping up a pair of eighth notes." />
+<h3>Continuation of Isaac Reilly's senior project in Computer Science at Yale University</h3>
+<h4>Advised by Donya Quick</h4>
+</center>
+
+The Heqet application is a graphical music score editor 
+that uses the Heqet library, which I created as my thesis last semester, for internal music 
+representation, which gives it a theoretically sound basis and the ability to export Lilypond code.
+In addition, the Heqet application uses a history system not only to undo actions but also to
+provide a powerful non-linear dependency system like branches in git but with the option to
+edit old actions and automatically update the final values. The interface is based on threepenny-gui,
+a platform-independent Haskell library which interacts through any browser, and uses functional
+reactive programming. The Heqet application will allow great freedom in copying and
+pasting exactly the parts of music you want and provide a full set of music editing functions
+which not only let you do what you want now, but can be modified later using the history system. 
+Many selections may be maintained simultaneously by a system of color and string labels, and through
+careful selections and deselections any boolean combination of selections may be calculated. 
+Thanks to the Heqet library, Lilypond code fragments may be attached to notes, enabling most lilypond
+tweaks to be stored in a Heqet file and exported correctly, even when moving and editing the notes
+they are attached to. These features are not fully implemented. The clear code structure encouraged by
+Haskell and functional reactive programming allows users to create their own custom music functions
+and include them in custom builds. The Heqet app was designed from the beginning to be usable by
+either the keyboard or mouse alone. Although the application renders final scores to Lilypond, real-time
+note editing is possible with an HTML5 canvas interface that uses simple glyphs, proportional horizontal
+spacing, no collision detection, and only renders the currently visible portion of the score.
+        
+
+        <br /><br />
+        The Heqet application is not ready for public use, but if you want to try it
+        now, here's the 
+        <a href="https://github.com/Super-Fluid/heqet-app-build">build instructions</a>
+        and <a href="./heqet-app-tutorial.pdf">tutorial</a>!
+</div>
+</body>
+</html>
