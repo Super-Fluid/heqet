@@ -47,7 +47,7 @@
 \pagestyle{plain}
 
 \begin{section}{Introduction to Heqet}
-The Heqet application is a graphical music score editor that uses the Heqet library for internal music representation and can export Lilypond code for beautiful final rendering. It's made to be usable with either just the mouse or just the keyboard, although using both is easier. It has an unusual system of history that allows you to copy a bit of music and then edit both copies at once, to grab music from the past and use it now, to edit the past and have changes reflected in the present, and any other structure of dependencies that can be represented as an acyclic directed graph. Heqet also lets you maintain many selections of music at the same time using color and string labels, and compute any boolean combination of selections. Combined with the many tools for selecting notes by their properties, this is a powerful editing system that can handle shifting inputs sensibly.
+The Heqet application is a graphical music score editor that uses the Heqet library for internal music representation and can export Lilypond code for beautiful final rendering. It's made to be usable with either just the mouse or just the keyboard, although using both together is easier. It has an unusual system of history that allows you to: copy a bit of music and then edit both copies at once, grab music from the past and use it now, edit the past and have changes reflected in the present, and create any other structure of dependencies that can be represented as an acyclic directed graph. Heqet also lets you maintain many selections of music at the same time using color and string labels, and compute any boolean combination of selections. Combined with the many tools for selecting notes by their properties, this is a powerful editing system that can handle shifting inputs sensibly.
 
 \end{section}
 
@@ -57,27 +57,31 @@ Instructions for downloading or building Heqet, as well as all the files, can be
 Once you have Heqet installed, launch the \texttt{heqet-exe} application. It should say ``listening on port 8023''. Heqet essentially runs a tiny web server. In order to get to the interface, open up your browser and go to \texttt{localhost:8023}.
 \end{section}
 
-\begin{section}{Notes \& Rhythms}
-Let's start by entering some notes. Heqet uses something like Lilypond English relative note entry, with the exceptions that a flat is \texttt{b}, a double flat is \texttt{t}, and a double sharp is \texttt{x}. There's no visible place to type; you just press the keys, which is true for all the keyboard commands in Heqet, somewhat like in vim. Try typing \verb+a 4 r c d e 2 f s g s , g x 1+ and watch what happens as you press each key. When you press a note-entry key, the note just entered appears, selected, and the insertion point moves to just beyond it. When you specify a duration, following notes take the same duration. 
-You can double-click to move the insertion point. If you want to select a precise moment in time that's not easy to click, you have two options: you can zoom in using the navigation buttons on the top right or the keyboard shortcuts \texttt{+ - 0 up down left right [ ]}. Or you can set the position directly in the Select panel on the right. 
+\begin{section}{Notes and Rhythms}
+Let's start by entering some notes. Heqet uses something like Lilypond English relative note entry, with the exceptions that a flat is \texttt{b}, a double flat is \texttt{t}, and a double sharp is \texttt{x}. There's no visible place to type; you just press the keys, as is true for all the keyboard commands in Heqet, somewhat like in the vim text editor. Try typing \verb+a 4 r c d e 2 f s g s , g x 1+ and watch what happens as you press each key. When you press a note-entry key, the note appears, selected, and the insertion point moves to just beyond it. When you specify a duration, following notes take the same duration. 
+You can double-click to move the insertion point. If you want to select a precise moment in time that's not easy to click, you have two options. You can zoom in using the navigation buttons on the top right or the keyboard shortcuts \texttt{+ - 0 up down left right [ ]}. Or you can set the position of the insertion point directly in the Select panel on the right. 
 \end{section}
 
 \begin{section}{Functions and Selections}
-To make a continuous selection, just click and drag, or click a single note. The Select panel contains many more ways to select by different criteria. The third way to  make a selection is in the Label panel, where you can select notes labeled with a color or a text label, and also assign those labels to the current selection. You can think of the color labels as secondary selections that you can switch between.
+To make a continuous selection, just click and drag, or click a single note. The Select panel lets you do make these kind of selections, and also contains many more ways to select by different criteria. A third way to make a selection is in the Label panel, where you can select notes labeled with a color or a text label, and also assign those labels to the current selection. You can think of the color labels as secondary selections that you can switch between.
 
 Almost everything in Heqet is a function that modifies the current selection. Even the keys you pressed to change the duration, accidental, and octave are just functions. Try selecting the first two notes and pressing \texttt{'} (apostrophe) --- they will both go up an octave. 
 
-Heqet can automatically assign accidentals and clef changes to your music, in the Clef and Accidental panels.  If you assign the accidentals now, you'll notice that the G double sharp changes to an A, because this is easier to read. The default key is C, and the F sharp is considered easier to read than a G flat. However, if you create several alternating F sharps and F naturals and assign the accidentals automatically, it should choose to use G flat.
+Heqet can automatically assign accidentals and clef changes to your music, in the Clef and Accidental panels.  If you assign the accidentals now, you'll notice that the G double sharp changes to an A, because this is easier to read. The default key is C, and the F sharp is considered easier to read than a G flat. However, if you create several alternating F sharps and F naturals and assign the accidentals automatically, it should choose to use G flat instead.
 
 \end{section}
 
 
 \begin{section}{Undo and Dependencies}
-You can copy and paste using the Edit panel or \texttt{w y}. There are many options to paste just part of the music data. Some of these options, like articulation, must try to fit the data to the target notes, and might not work very well if they don't match up. Make a duplicate of some of your current music. Now delete part of one copy by pressing the delete key or going to the Edit panel. Suppose you actually wanted to delete this part from both of the duplicates. You could just make the second deletion, but suppose that this was a commonly repeated phrase and they all need to be modified. A better approach is to undo this deletion with \texttt{u} or the button in the Graph panel and now make the edit the right way. 
+You can copy and paste using the Edit panel or the \texttt{w y} keyboard commands, inspired by the emacs text editor. There are many options to paste just part of the music data. Some of these options, like pasting articulation, must try to fit the data to the target notes, and might not work very well if they don't match up. 
 
-In most programs, undoing something and then doing something else would erase the action you undid. In Heqet, however, nothing is ever lost, unless you use the Trim panel, which is recommended only if the file size becomes excessive. If you now do something else, you simply create an ``alternate timeline''. Heqet history can be any acyclic directed graph. In order to navigate the history, we'll use the Graph panel. Undo once more, to before you did the copy-and-paste. Now, make the deletion again. We want to move the copy-and-paste to after this deletion in the history. To do that, check the current node number in the Graph panel. Now undo, and navigate to the next node in the original timeline, called ``paste'' [button layout is vague, todo] and put the number of the ``delete'' node into both the ``parent'' and ``copy from'' fields.
+Make a duplicate of some of your current music. Now delete part of one copy by pressing the delete key or going to the Edit panel. Suppose you now realize that you actually wanted to delete this part from both of the duplicates. You could just make the second deletion, but suppose that this was a commonly repeated phrase and they all need to be modified. A better approach is to undo this deletion with \texttt{u} or the undo button in the Graph panel and now make the edit the right way. 
 
-What if the deletion was actually a difficult edit and you only realized afterward that it needed to be duplicated? That's no problem! Can you figure out how to do it without having to redo the edit?
+In most programs, undoing something and then doing something else would erase the action you undid. In Heqet, however, nothing is ever lost, unless you use the Trim panel, which is recommended only if the file size becomes excessive. If you now do something else, you simply create an ``alternate timeline''. Heqet history can be any acyclic directed graph. In order to navigate the history, we'll use the Graph panel. Undo once more, to before you did the copy-and-paste. Now, make the deletion again. We want to move the copy-and-paste to after this deletion in the history. To do that, check the current node number in the Graph panel. Navigate to the next node in the original timeline, called ``copy'' [button layout is vague, todo] and put the number of the ``delete'' node into both the ``parent'' and ``copy from'' fields.
+
+The reason that there is only one node for the copy-and-paste operation is that copying doesn't actually edit the music at all --- it simply notes what the current node is. Then, when you paste, it creates a node called ``copy'' which pulls music from the previously-recorded node.
+
+What if the deletion was actually a difficult edit and you only realized after finishing it that it needed to be duplicated? That's no problem! Can you figure out how to apply some changes to all the duplicates without having to redo the edit?
 
 
 \end{section}
@@ -85,9 +89,11 @@ What if the deletion was actually a difficult edit and you only realized afterwa
 
 % staves and groups
 
-\begin{section}{Lilypond \& Files}
+\begin{section}{Lilypond and Files}
 
-To save and open files, you use the File panel, as you might expect. Don't forget to save before closing the browser window! The ``embed'' option lets you copy the entire history from another Heqet file. If you just want to copy a small piece of music, you can open one file, press copy JSON, then open the other and press paste JSON. There is also an option to export to Lilypond. If you want to make a tweak to the Lilypond, you should try to use the Lilypond panel to add the tweaks to the Heqet file, so that you don't have to redo them every time you export a new version.
+To save and open files, you use the File panel, as you might expect. Don't forget to save before closing the browser window! The ``embed'' option lets you copy the entire history from another Heqet file. If you just want to copy a small piece of music, you can open one file, press ``copy JSON'', then open the other and press ``paste JSON''. 
+
+The File panel also lets you export to Lilypond. If you want to make a tweak to the Lilypond, you should try to use the Lilypond panel to add the tweaks to the Heqet file, so that you don't have to redo them every time you export a new version.
 
 \end{section}
 \end{document}
